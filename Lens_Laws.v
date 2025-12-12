@@ -71,7 +71,12 @@ Definition PS : Prop :=
   forall (s : S) ,exists (s' : S) (v : V),
     put(s',v) = s.
 
-Variable s0 : S.
+Theorem PG_GS (s0 : S): PG -> GS.
+Proof.
+  unfold PG. unfold GS.
+  intros H v. exists (put(s0,v)).
+  apply H.
+Qed.
 
 Theorem SGP_GP : SGP -> GP.
 Proof.
@@ -170,16 +175,21 @@ Qed.
 Theorem WPG_WSS_PGP : WPG /\ WSS -> PGP.
 Proof.
   unfold WPG. unfold WSS. unfold PGP.
-  intros [H1 H2] s v. 
-  destruct (H2 s v) as [v' H].
-  rewrite <- H. Admitted.
+  intros [WPG WSS] s v.
+  destruct (WSS s v) as [v' H].
+  rewrite <- H at 2 3.
+  apply WPG.
+Qed.
 
 Theorem UD_WSS_GP : UD /\ WSS -> GP.
 Proof.
-  unfold UD. unfold WSS. unfold GPG.
-  intros [H1 H2] s. 
-  destruct (H2 s (get s)) as [v H].
-  rewrite <- H. Admitted.
+  unfold UD. unfold WSS. unfold GP.
+  intros [UD WSS] s.
+  rewrite <- (UD s (get s)).
+  destruct (WSS (put(s,get s)) (get s)) as [v H].
+  rewrite <- H at 1.
+  apply UD.
+Qed.
 
 Theorem PS_WSS_SS : PS /\ WSS -> SS.
 Proof.
@@ -225,12 +235,7 @@ Proof.
 Qed.
 
 
-Theorem PG_GS : PG -> GS.
-Proof.
-  unfold PG. unfold GS.
-  intros H v. exists (put(s0,v)).
-  apply H.
-Qed.
+
 
 Theorem PI_WPG_PG : PI /\ WPG -> PG.
 Proof.
@@ -257,7 +262,8 @@ Qed.
 Theorem PI_PT_VD : PI /\ PT -> VD.
 Proof.
   unfold PI. unfold PT. unfold VD.
-  intros [H1 H2] s s' v v' H. apply (H1 (put(s,v)) v v').
+  intros [H1 H2] s s' v v' H.
+  apply (H1 (put(s,v)) v v').
   rewrite H at 2.
   rewrite <- H2 in H. rewrite <- (H2 s' v') in H.
   apply H.
@@ -285,23 +291,16 @@ Proof.
 Qed.
 
 
-
-Theorem SGP_PG_PP : SGP/\ PG -> PP.
-Proof.
-  unfold SGP. unfold PG.
-  unfold PP.
-  intros [H1 H2] s v v'.
-  rewrite <- (H1 s (put(put(s,v),v'))).
-  rewrite H2. reflexivity.
-Qed.
-
 Theorem SGP_PI_PP : SGP/\PI -> PP.
 Proof.
   unfold SGP. unfold PI.
   unfold PP.
   intros [H1 H2] s v v'.
-  rewrite <- (H1 s (put(put(s,v),v'))).
+  
+
+  rewrite <- (H1 s (put((put(s,v)),v'))).
   rewrite <- (H1 s (put(s,v'))).
+  
   Admitted.
 
 Theorem GP_PP_UD : GP /\ PP -> UD.
@@ -339,14 +338,8 @@ Proof.
 Qed.
 
 
-Theorem PS_WSS_PT : PS /\ WSS -> PT.
-Proof.
-  unfold PS. unfold WSS. unfold PT.
-  intros [H1 H2] s v.
-  destruct (H1 s) as [s' [v' H3]].
-  destruct (H2 s' v') as [v'' H4].
-  rewrite <- H3. Admitted.
 
 End Lens.
 
-End Lens_Laws.          
+
+End Lens_Laws. 
