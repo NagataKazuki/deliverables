@@ -1,144 +1,163 @@
 Require Import Setoid.
 From mathcomp
-Require Import ssreflect.
+Require Import all_ssreflect.
+From mathcomp Require Import ssreflect ssrfun ssrbool.
+From Hammer Require Import Tactics.
+From Hammer Require Import Hammer.
 
-Variable S V : Type.
-Variable p_get : S -> option V.
-Variable p_put : S * V -> option S.
 
-Section PartialLensLaws.
+Record Lens (S V : Type):= mkLens{
+  p_get : S -> option V;
+  p_put : S * V -> option S;
+}.
 
-Definition pSGP : Prop :=
+Arguments p_get {S V} _ _.
+Arguments p_put {S V} _ _.
+
+
+Class inhabited (T : Type) := Inhabited { inhab : T }.
+Instance inhabited_bool : inhabited bool :=
+  {| inhab := true |}.
+Instance inhabited_nat : inhabited nat :=
+  {| inhab := 0 |}.
+
+
+Section LensLaws.
+
+Variable (S V : Type) (l : Lens S V).
+
+Notation get := l.(p_get).
+Notation put := l.(p_put).
+
+Definition SGP : Prop :=
   forall (s s' : S) (v : V),
-    p_get s' = Some v ->
-    p_put (s, v) = Some s'.
+    get s' = Some v ->
+    put (s, v) = Some s'.
 
-Definition pGP : Prop :=
+Definition GP : Prop :=
   forall (s : S) (v : V),
-    p_get s = Some v ->
-    p_put (s, v) = Some s.
+    get s = Some v ->
+    put (s, v) = Some s.
 
-Definition pPG : Prop :=
+Definition PG : Prop :=
   forall (s s' : S) (v : V),
-    p_put (s, v) = Some s' ->
-    p_get s' = Some v.
+    put (s, v) = Some s' ->
+    get s' = Some v.
 
-Definition pPP : Prop :=
+Definition PP : Prop :=
   forall (s s' s'' : S) (v v' : V),
-    p_put(s, v) = Some s' /\
-    p_put(s', v') = Some s'' ->
-    p_put(s, v') = Some s''.
+    put(s, v) = Some s' /\
+    put(s', v') = Some s'' ->
+    put(s, v') = Some s''.
 
-Definition pWPG : Prop :=
+Definition WPG : Prop :=
   forall (s s' : S) (v v' : V),
-    p_put(s, v) = Some s' /\
-    p_get s' = Some v' ->
-    p_put(s, v') = Some s'.
+    put(s, v) = Some s' /\
+    get s' = Some v' ->
+    put(s, v') = Some s'.
 
-Definition pPGP : Prop :=
+Definition PGP : Prop :=
   forall (s s' : S) (v v' : V),
-    p_put(s, v) = Some s' /\
-    p_get s' = Some v' ->
-    p_put(s', v') = Some s'.
+    put(s, v) = Some s' /\
+    get s' = Some v' ->
+    put(s', v') = Some s'.
 
-Definition pGPG : Prop :=
+Definition GPG : Prop :=
   forall (s s' : S) (v : V),
-    p_get s = Some v /\
-    p_put(s, v) = Some s' ->
-    p_get s' = Some v.
+    get s = Some v /\
+    put(s, v) = Some s' ->
+    get s' = Some v.
 
-Definition pUD : Prop :=
+Definition UD : Prop :=
   forall (s s' : S) (v v' : V),
-    p_put(s, v) = Some s' /\
-    p_get s = Some v' ->
-    p_put(s', v') = Some s.
+    put(s, v) = Some s' /\
+    get s = Some v' ->
+    put(s', v') = Some s.
 
-Definition pGI : Prop :=
+Definition GI : Prop :=
   forall (s s' : S) (v : V),
-    p_get s = Some v /\ p_get s' = Some v ->
+    get s = Some v /\ get s' = Some v ->
     Some s = Some s'.
 
-Definition pGS : Prop :=
+Definition GS : Prop :=
   forall (v : V) ,exists (s : S),
-    p_get s = Some v.
+    get s = Some v.
 
-Definition pPT : Prop :=
+Definition PT : Prop :=
   forall (s s' : S) (v : V),
-    p_put(s, v) = Some s' ->
-    p_put(s', v) =Some s'.
+    put(s, v) = Some s' ->
+    put(s', v) =Some s'.
 
-Definition pSS : Prop :=
+Definition SS : Prop :=
   forall (s : S),exists (v : V),
-    p_put(s, v) = Some s.
+    put(s, v) = Some s.
 
-Definition pWSS : Prop :=
+Definition WSS : Prop :=
   forall (s s' : S) (v' : V),exists (v : V),
-    p_put(s', v') = Some s ->
-    p_put(s , v) = Some s.
+    put(s', v') = Some s ->
+    put(s , v) = Some s.
 
-Definition pPS : Prop :=
+Definition PS : Prop :=
   forall (s : S),exists (s' : S) (v : V),
-    p_put(s', v) = Some s.
+    put(s', v) = Some s.
 
-Definition pVD : Prop :=
+Definition VD : Prop :=
   forall (s s' s'' : S) (v v' : V),
-    p_put(s,v) = Some s'' /\ p_put(s', v') = Some s'' ->
+    put(s,v) = Some s'' /\ put(s', v') = Some s'' ->
     v = v'.
 
-Definition pPI : Prop :=
+Definition PI : Prop :=
   forall (s s' : S) (v v' : V),
-    p_put(s, v) = Some s' /\ p_put(s, v') = Some s' ->
+    put(s, v) = Some s' /\ put(s, v') = Some s' ->
     v = v'.
 
-End PartialLensLaws.
+End LensLaws.
 
-Ltac unfold_laws :=
-  rewrite / pSGP /pGP / pPG /pPP
-          / pWPG / pUD / pGPG / pPGP
-          / pGS / pGI / pPS / pGS
-          / pSS / pWSS / pVD / pPI.
+Notation "[ L1 &&& .. &&& Ln ===> L ]" :=
+ (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+   L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60, format "[ L1  &&&  ..  &&&  Ln  ===>  L ]").
 
 (*Pget means "get is a partial function",also Tget means "get is a total function"*)
 (*Pput means "put is a partial function",also Tput means "put is a total function"*)
-
 
 (*PPInplication means Implications when get and put are both partial functions*)
 Section PPImplication.
 
 Section GPFamily.
 
-Theorem PgetPputSGP_GP : pSGP -> pGP.
+Lemma PgetPputSGP_GP : [SGP ===> GP].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSS_PS : pSS -> pPS.
+Lemma PgetPputSS_PS : [SS ===> PS].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSGP_GI : pSGP -> pGI.
+Theorem PgetPputSGP_GI : [SGP ===> GI].
 Proof.
-  move => SGP s s' v [H1 H2];
+  move => S V l hs hv SGP s s' v [H1 H2].
   apply (SGP s s v) in H1;
   apply (SGP s s' v) in H2;
   rewrite H1 in H2;
   apply H2.
 Qed.
 
-Theorem PgetPputSGP_WPG : pSGP -> pWPG.
+Theorem PgetPputSGP_WPG : [SGP ===> WPG].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSGP_UD : pSGP -> pUD.
+Theorem PgetPputSGP_UD : [SGP ===> UD].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputGP_GPG : pGP -> pGPG.
+Theorem PgetPputGP_GPG : [GP ===> GPG].
 Proof.
-  move => GP s s' v [H1 H2];
+  move => S V hs hv l GP s s' v [H1 H2];
   apply GP in H1 as H3;
   rewrite H3 in H2;
   inversion H2;
@@ -146,39 +165,37 @@ Proof.
   apply H1.
 Qed.
 
-Theorem PgetPputGP_PGP : pGP -> pPGP.
+Theorem PgetPputGP_PGP : [GP ===> PGP].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSS_WSS : pSS -> pWSS.
+Theorem PgetPputSS_WSS : [SS ===> WSS].
 Proof.
-  move => SS s s' v';
+  move => S V hs hv l SS s s' v';
   case (SS s) => [v SS1];
-  exists (v);
-  intros H1;
   firstorder.
 Qed.
 
-Theorem PgetPputWPGandSS_GP : pWPG /\ pSS -> pGP.
+Theorem PgetPputWPGandSS_GP : [WPG &&& SS ===> GP].
 Proof.
-  move => [WPG SS] s v H;
+  move => S V hs hv l WPG SS s v H;
   case (SS s) => [v' H1];
   apply (WPG s s v' v);
   firstorder.
 Qed.
 
-Theorem PgetPputUDandSS_GP : pUD /\ pSS -> pGP.
+Theorem PgetPputUDandSS_GP : [UD &&& SS ===> GP].
 Proof.
-  move => [UD SS] s v H;
+  move => S V hs hv l UD SS s v H;
   case (SS s) => [v' H1];
   apply (UD s s v' v);
   firstorder.
 Qed.
 
-Theorem PgetPputPGPandUD_GPG : pPGP /\ pUD -> pGPG.
+Theorem PgetPputPGPandUD_GPG : [PGP &&& UD ===> GPG].
 Proof.
-  move => [PGP UD] s s' v [H1 H2];
+  move => S V hs hv l PGP UD s s' v [H1 H2];
   move : (UD s s' v v) => H3;
   have H4 := H3 (conj H2 H1);
   move : (PGP s' s v v) => H5;
@@ -188,33 +205,33 @@ Proof.
 Qed.
 
 
-Theorem PgetPputPGPandPS_GP : pPGP /\ pPS -> pGP.
+Theorem PgetPputPGPandPS_GP : [PGP &&& PS ===> GP].
 Proof.
-  intros [PGP PS] s v H1;
+  move => S V hs hv l PGP PS s v H1;
   case (PS s) => [s' [v' H2]];
   apply (PGP s' s v' v);
   firstorder.
 Qed.
 
-Theorem PgetPputWPGandWSS_PGP : pWPG /\ pWSS -> pPGP.
+Theorem PgetPputWPGandWSS_PGP : [WPG &&& WSS ===> PGP].
 Proof.
-  intros [WPG WSS] s s' v v' [H1 H2];
+  move => S V hs hv l WPG WSS s s' v v' [H1 H2];
   case (WSS s' s v) => [v'' H3];
   apply (WPG s' s' v'' v');
   firstorder.
 Qed.
 
-Theorem PgetPputUDandWSS_PGP : pUD /\ pWSS -> pPGP.
+Theorem PgetPputUDandWSS_PGP : [UD &&& WSS ===> PGP].
 Proof.
-  move => [UD WSS] s s' v v' [H1 H2];
+  move => S V hs hv l UD WSS s s' v v' [H1 H2];
   case (WSS s' s v) => [v'' H3];
   apply (UD s' s' v'' v');
   firstorder.
 Qed.
 
-Theorem PgetPputUDandWSS_GPG : pUD /\ pWSS -> pGPG.
+Theorem PgetPputUDandWSS_GPG : [UD &&& WSS ===> GPG].
 Proof.
-  move => [UD WSS] s s' v [H1 H2];
+  move => S V hs hv l UD WSS s s' v [H1 H2];
   case (WSS s s' v) => [v' H3];
   move : (UD s s' v v) => H4;
   have H5 := H4 (conj H2 H1);
@@ -225,9 +242,9 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputWSSandPS_SS : pWSS /\ pPS -> pSS.
+Theorem PgetPputWSSandPS_SS : [WSS &&& PS ===> SS].
 Proof.
-  move => [WSS PS] s;
+  move => S V hs hv l WSS PS s;
   case (PS s) => [s' [v H1]];
   case (WSS s s' v) => [v' H2];
   firstorder.
@@ -237,9 +254,9 @@ End GPFamily.
 
 Section PGFamily.
 
-Theorem PgetPputPG_VD : pPG -> pVD.
+Theorem PgetPputPG_VD : [PG ===> VD].
 Proof.
-  move => PG s s' s'' v v' [H1 H2];
+  move => S V hs hv l PG s s' s'' v v' [H1 H2];
   apply PG in H1;
   apply PG in H2;
   rewrite H1 in H2;
@@ -247,19 +264,19 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem PgetPputVD_PI : pVD -> pPI.
+Theorem PgetPputVD_PI : [VD ===> PI].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPG_GPG : pPG -> pGPG.
+Theorem PgetPputPG_GPG : [PG ===> GPG].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPG_WPG : pPG -> pWPG.
+Theorem PgetPputPG_WPG : [PG ===> WPG].
 Proof.
-  move => PG s s' v v' [H1 H2];
+  move => S V hs hv l PG s s' v v' [H1 H2];
   apply PG in H1 as H3;
   rewrite H2 in H3;
   inversion H3;
@@ -270,35 +287,35 @@ End PGFamily.
 
 Section PPFamily.
 
-Theorem PgetPputPT_WSS : pPT -> pWSS.
+Theorem PgetPputPT_WSS : [PT ===> WSS].
 Proof.
-  move => PT s s' v';
+  move => S V hs hv l PT s s' v';
   exists (v');
   firstorder.
 Qed.
 
 End PPFamily.
 
-Theorem PgetPputPIandPT_VD : pPI /\ pPT -> pVD.
+Theorem PgetPputPIandPT_VD : [PI &&& PT ===> VD].
 Proof.
-  move => [PI PT] s s' s'' v v' [H1 H2];
+  move => S V l hs hv PI PT s s' s'' v v' [H1 H2];
   apply (PI s'' s'' v v');
   firstorder.
 Qed.
 
-Theorem PgetPputSGPandGS_PG : pSGP /\ pGS -> pPG.
+Theorem PgetPputSGPandGS_PG : [SGP &&& GS ===> PG].
 Proof.
-  unfold pSGP;unfold pGS;unfold pPG.
-  move => [SGP GS] s s' v H;
+  move => S V hs hv l SGP GS s s' v H;
   case (GS v) => [s'' H1];
   apply (SGP s s'' v) in H1 as H2;
   rewrite H in H2;
   inversion H2;
   firstorder.
 Qed.
-Theorem PgetPputWSSandVD_PT : pWSS /\ pVD -> pPT.
+
+Theorem PgetPputWSSandVD_PT : [WSS &&& VD ===> PT].
 Proof.
-  move => [WSS VD] s s' v H;
+  move => S V hs hv l WSS VD s s' v H;
   case (WSS s' s v) => [v' H1];
   move :(H1 H) => H2;
   have H3 : v = v';
@@ -308,9 +325,9 @@ Proof.
   apply H2.
 Qed.
 
-Theorem PgetPputPGPandPP_WPG : pPGP /\ pPP -> pWPG.
+Theorem PgetPputPGPandPP_WPG : [PGP &&& PP ===> WPG].
 Proof.
-  move => [PGP PP] s s' v v' [H1 H2];
+  move => S V hs hv l PGP PP s s' v v' [H1 H2];
   apply (PP s s' s' v v');
   split;
   firstorder;
@@ -318,9 +335,9 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPGPandPG_PT : pPGP /\ pPG -> pPT.
+Theorem PgetPputPGPandPG_PT : [PGP &&& PG ===> PT].
 Proof.
-  move => [PGP PG] s s' v H1;
+  move => S V hs hv l PGP PG s s' v H1;
   apply PG in H1 as H2;
   move : (PGP s s' v v) => H3;
   have H4 := H3 (conj H1 H2);
@@ -329,32 +346,1094 @@ Qed.
 
 End PPImplication.
 
-Variable get : S -> V.
-Variable put : S * V -> S.
-Variable PartialProp : (S -> option V) -> (S * V -> option S) -> Prop.
+Section Partial.
+
+Variables S V : Type.
+Variable p_get : S -> option V.
+Variable p_put : S * V -> option S.
+
+Variable PartialProp :
+  (S -> option V) -> (S * V -> option S) -> Prop.
 
 Definition get_total : Prop :=
-  forall (s : S), p_get s <> None.
+  forall s : S , p_get s <> None.
 
 Definition put_total : Prop :=
-  forall (s : S) (v : V), p_put (s, v) <> None.
+  forall s : S, forall v : V, p_put (s, v) <> None.
+Section Total.
 
-(*Props of partial functions contain props of total functions*)
-Definition Prop_PartialtoTotal :
-  (S -> V) -> (S * V -> S) -> Prop :=
-  fun get put =>
-    PartialProp (fun s => Some (get s))
-       (fun sv => Some (put sv)).
-
+Variable get : S -> V.
+Variable put : S * V -> S.
+Definition Prop_PartialtoTotal : Prop :=
+  PartialProp
+    (fun s => Some (get s))
+    (fun sv => Some (put sv)).
 Theorem PartialProptoTotalProp :
-  PartialProp (fun s => Some (get s))
-     (fun sv => Some (put sv))
-  <-> Prop_PartialtoTotal get put.
+  PartialProp
+    (fun s => Some (get s))
+    (fun sv => Some (put sv))
+  <-> Prop_PartialtoTotal.
 Proof.
-  unfold Prop_PartialtoTotal.
-  firstorder;
+  tauto.
+Qed.
+
+End Total.
+End Partial.
+Definition GetTotal (S V : Type) (l : Lens S V) : Prop :=
+  forall s : S, l.(p_get) s <> None.
+
+Definition PutTotal (S V : Type) (l : Lens S V) : Prop :=
+  forall (s : S) (v : V), l.(p_put) (s,v)<> None.
+
+Notation "[ L1 &&& .. &&& Ln ===>g L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>p L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     PutTotal S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>p L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>pg L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> PutTotal S V l-> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>pg L ]").
+
+
+Lemma TgetPputGP_SS : [GP ===>g SS].
+Proof.
+  move => S V hs hv l gt GP s.
+  case (p_get l s) eqn:H.
+  -firstorder.
+  -exfalso; apply (gt s) ; firstorder.
+Qed.
+
+Lemma TgetPputGPG_WSS : [PGP ===>g WSS].
+Proof.
+  move => S V hs hv l gt PGP s s' v';
+  case (p_get l s) eqn:H1.
+  exists (v); move => H2;
+  have H3 := (PGP s' s v' v) (conj H2 H1);
+  firstorder.
+  exfalso; apply (gt s); firstorder.
+Qed.
+
+Lemma TgetPputUD_WPG : [UD ===>g WPG].
+Proof.
+  move => S V hs hv l gt UD s s' v v' [H1 H2];
+  case (p_get l s) eqn:H3.
+  have H4 := (UD s s' v v0) (conj H1 H3);
+  have H5 := (UD s' s v0 v') (conj H4 H2);
+  firstorder.
+  exfalso; apply (gt s); firstorder.
+Qed.
+
+
+Lemma TgetPputWPGandPI_PG : [WPG &&& PI ===>g PG].
+Proof.
+  move => S V hs hv l gt WPG PI s s' v H;
+  case (p_get l s') eqn:H1.
+  move : (WPG s s' v v0) => H2;
+  have H3 := H2 (conj H H1);
+  have H4 := (PI s s' v v0) (conj H H3);
+  rewrite H4.
+  -reflexivity.
+  -exfalso; apply (gt s'); apply H1.
+Qed.
+
+Lemma TgetPputPGPandVD_PG : [PGP &&& VD ===>g PG].
+Proof.
+  move => S V hs hv l gt PGP VD s s' v H;
+  case (p_get l s') eqn:H1.
+  have H2 := (PGP s s' v v0) (conj H H1);
+  have H3 := (VD s s' s' v v0) (conj H H2);
+  rewrite H3; reflexivity.
+  exfalso; apply (gt s'); firstorder.
+Qed.
+
+Lemma TgetPputSGPandPG_PP : [SGP &&& PG ===>g PP].
+Proof.
+  move => S V hs hv l gt SGP PG s s' s'' v v' [H1 H2].
+  apply SGP.
+  apply PG with (s := s').
+  exact H2.
+Qed.
+
+Lemma PgetTputGIandGPG_GP : [GI &&& GPG ===>p GP].
+Proof.
+  move => S V hs hv l pt GI GPG s v H;
+  case (p_put l (s,v)) eqn:H1.
+  have H2 := (GPG s s0 v) (conj H H1);
+  have H3 := (GI s s0 v) (conj H H2);
+  firstorder.
+  exfalso;apply (pt s v); firstorder.
+Qed.
+
+Lemma PgetTputPG_GS : [PG ===>p GS].
+Proof.
+  move => S V hs hv l PT HPG v.
+  pose (s_init := inhab : S).
+  pose s_opt := p_put l (s_init, v).
+  have H_not_none: s_opt <> None by apply: PT.
+  destruct s_opt as [s' | ] eqn:H_put.
+  exists s'.
+  apply: (HPG s_init s' v).
+  exact: H_put.
+  done.
+Qed.
+
+Lemma PputPP_PT : [PP ===>p PT].
+Proof.
+  move => S V hs hv l pt PP s s' v H;
+  case (p_put l (s,v)) eqn:H1;
+  case (p_put l (s',v)) eqn:H3;
+  inversion H;
+  rewrite H2 in H1.
+  have H4 := (PP s s' s1 v v)(conj H1 H3);
+  rewrite H4 in H1; firstorder.
+  exfalso;apply(pt s' v);firstorder.
+Qed.
+
+
+Ltac unfold_laws :=
+  rewrite /SGP /GP /PG /PP /WPG /PGP 
+          /UD /PT /SS /PS 
+          /VD /PI /GS /GI /GPG.
+
+Lemma non_implication (P Q : Prop) : P -> ~ Q -> ~ (P -> Q).
+Proof. firstorder. Qed.
+
+Ltac intro_all :=
+  repeat (move=> ?).
+
+Ltac ce_lens S V p_get p_put :=
+  move=> H;
+  have := H S V (mkLens p_get p_put);
+  unfold_laws=> /=;
+  intro_all.
+
+Tactic Notation "len" 
+  constr(S) constr(V) uconstr(get) uconstr(put):=
+  move => H;
+  let l := constr:(@mkLens S V get put) in
+  pose l as l1.
+
+Inductive Dom3 : Type :=
+| a | b | c.
+
+Lemma TgetTputGPandUDandGInotSGP : ~[GP &&& UD &&& GI ===>pg SGP].
+Proof.
+  move => H.
+  set (S := bool).
+  set (V := bool).
+  set (l :=
+  @mkLens bool bool
+   (fun b =>
+    match b with
+    |false => Some true
+    |true => Some false
+    end)
+   (fun sv =>
+    match sv with
+    |(false,_) => Some false
+    |(true,_) => Some true
+    end)
+  ).
+  have HSGP : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l -> SGP S V l := H S V _ _ l.
+  have GT : GetTotal S V l.
+  by move=> [].
+  have PT : PutTotal S V l.
+  by move => [] [].
+  have HGP : GP S V l.
+  by move => [] [].
+  have HUD : UD S V l.
+  by move=> [] [] [] []; firstorder.
+  have HGI : GI S V l.
+  by move => [] [] []; firstorder.
+  have HnotSGP : ~ SGP S V l.
+  by move => HW;move :(HW false true false erefl).
   firstorder.
 Qed.
 
-Section PGImplication.
+Lemma TgetTputGPandUDnotGI : ~[GP &&& UD ===>pg GI].
+Proof.
+  move => H.
+  set (S := bool).
+  set(V := bool).
+  set(l :=
+  @mkLens bool bool 
+   (fun b => Some false)
+   (fun sv =>
+    match sv with
+    |(false,_) => Some false
+    |(true,_) => Some true
+    end)).
+  have HGI : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l := H S V _ _ l.
+  have GT : GetTotal S V l.
+  by move => [].
+  have PT : PutTotal S V l. 
+  by move => [] [].
+  have GP : GP S V l. by move => [] [].
+  have UD : UD S V l. move => [] [] [] [] ; firstorder.
+  have HnotGI : ~ GI S V l.
+  by move => HW;move:( HW false true false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputGIandPGPandWPGnotGPG : ~[GI &&& PGP &&& WPG ===>pg GPG].
+Proof.
+  move => H.
+  set(S := bool).
+  set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some b)
+  (fun sv => Some true)
+  ).
+  have HGPG : GetTotal S V l -> PutTotal S V l -> GI S V l -> PGP S V l -> WPG S V l -> GPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GI S V l. by move => [] [] []; firstorder.
+  have HPGP : PGP S V l. by move => [] [] [] [];firstorder.
+  have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
+  have HnotGPG : ~ GPG S V l.
+  by move => HW ;move :(HW false true false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputGIandSSnotGPG : ~[GI &&& SS ===>pg GPG].
+Proof.
+  move => H.
+  set(S := bool).
+  set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => 
+   match b with
+   |true => Some false
+   |false => Some true
+  end)
+  (fun sv =>
+   match sv with
+   |(true,true) => Some true
+   |_ => Some false
+   end
+   )
+  ).
+  have HGPG : GetTotal S V l -> PutTotal S V l -> GI S V l -> SS S V l -> GPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GI S V l. by move => [] [] [] ; firstorder.
+  have HSS : SS S V l. rewrite /SS; case=> /=; exists true; firstorder.
+  have HnotGPG : ~ GPG S V l. move => HW.
+  have := HW true false false (conj erefl erefl).
+  discriminate. firstorder.
+Qed.
+
+Lemma TgetTputGIandUDnotGPG : ~[GI &&& UD ===>pg GPG].
+Proof.
+  move => H. set(S := bool). set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some b)
+  (fun sv =>
+   match sv with
+   |(false,_) => Some true
+   |(true,_) => Some false
+   end
+   )
+  ).
+  have HGPG : GetTotal S V l -> PutTotal S V l -> GI S V l -> UD S V l -> GPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GI S V l. by move => [] [] [] ; firstorder.
+  have HUD : UD S V l. by move => [] [] [] [];firstorder.
+  have HnotGPG : ~ GPG S V l.
+  by move => HW;move:(HW false true false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputGIandSSnotPGP : ~[GI &&& SS ===>pg PGP].
+Proof.
+  move => H. set(S := bool). set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some b)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+   end
+   )
+  ).
+  have HPGP : GetTotal S V l -> PutTotal S V l -> GI S V l -> SS S V l -> PGP S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GI S V l. by move => [] [] []; firstorder.
+  have HSS : SS S V l. rewrite /SS ;case => /=.
+  exists false; by []. exists true; by [].
+  have HnotPGP : ~ PGP S V l.
+  by move=> HW; move: (HW false true false true (conj erefl erefl)). 
+  firstorder.
+Qed.
+
+
+Lemma TgetTputGPGandSSnotPGP : ~[GPG &&& SS ===>pg PGP].
+Proof.
+  move => H.
+  set(S := bool).
+  set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some false)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+   end
+   )
+  ).
+  have HPGP : GetTotal S V l -> PutTotal S V l -> GPG S V l -> SS S V l -> PGP S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GPG S V l. by move => [] [] []; firstorder.
+  have HSS : SS S V l. rewrite /SS; case => /=.
+  exists false;by [].
+  exists true;by [].
+  have HnotPGP : ~ PGP S V l.
+  by move => HW; move :(HW false false true false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputGIandUDnotWSS : ~[GI &&& UD ===>pg WSS].
+Proof.
+  move => H. set(S := bool). set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some b)
+  (fun sv =>
+   match sv with
+   |(false,true) => Some true
+   |_ => Some false
+   end
+   )
+  ).
+  have HWSS : GetTotal S V l -> PutTotal S V l -> GI S V l -> UD S V l -> WSS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GI S V l. by move => [] [] [];firstorder.
+  have HUD : UD S V l. by move => [] [] [] [];firstorder.
+  have HnotWSS : ~ WSS S V l.
+  by move=> HW; move: (HW true false true) => [v Hv];
+  have := Hv erefl. firstorder.
+Qed.
+
+Lemma TgetTputGPGandUDnotWSS : ~[GPG &&& UD ===>pg WSS].
+Proof.
+  move => H. set(S := bool). set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some true)
+  (fun sv =>
+   match sv with
+   |(false,_) => Some true
+   |(true,_) => Some false
+   end
+   )
+  ).
+  have HWSS : GetTotal S V l -> PutTotal S V l -> GPG S V l -> UD S V l -> WSS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGPG : GPG S V l. by move => [] []; firstorder.
+  have HUD : UD S V l. by move => [] [] [] [];firstorder.
+  have HnotWSS : ~ WSS S V l.
+  by move => HW; move :(HW true false true) => [v Hv];
+  have := Hv erefl. firstorder.
+Qed.
+
+Lemma TgetTputGIandWPGandPGPnotPS : ~[GI &&& WPG &&& PGP ===>pg PS].
+Proof.
+  move => H. set(S := bool). set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b =>
+    match b with
+    |false => Some true
+    |true => Some false
+    end)
+  (fun _ => Some true
+   )
+  ).
+  have HPS : GetTotal S V l -> PutTotal S V l -> GI S V l -> WPG S V l -> PGP S V l -> PS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGI : GI S V l. by move => [] [] []; firstorder.
+  have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
+  have HPGP : PGP S V l. by move => [] [] [] [];firstorder.
+  have HnotPS : ~ PS S V l.
+  by move => HW ; move : (HW false) => [s' [v HJ]].
+  firstorder.
+Qed.
+
+Lemma TgetTputGPGandWPGandPGPnotPS : ~[GPG &&& WPG &&& PGP ===>pg PS].
+Proof.
+  move => H. set(S := bool). set(V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some false)
+  (fun _ => Some true)
+  ).
+  have HPS : GetTotal S V l -> PutTotal S V l -> GPG S V l -> WPG S V l -> PGP S V l -> PS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have PT : PutTotal S V l. by [].
+  have HGI : GPG S V l. by move => [] [] [];firstorder.
+  have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
+  have HPGP : PGP S V l. by move => [] [] [] [];firstorder.
+  have HnotPS : ~ PS S V l.
+  by move => HW;move: (HW false)=> [s' [v HJ]].
+  firstorder.
+Qed.
+
+
+Lemma TgetTputGPnotWPG : ~[GP &&& GI ===>pg WPG].
+Proof.
+  move => H. set (S := bool). set (V := Dom3).
+  set (l :=
+  @mkLens bool Dom3
+    (fun s =>
+       match s with
+       | false => Some a
+       | true => Some c
+       end)
+    (fun sv =>
+     match sv with
+     | (false, a) => Some false
+     | (false, b) => Some true
+     | (false, c) => Some false
+     | (true,  a) => Some true
+     | (true,  b) => Some false
+     | (true,  c) => Some true
+     end)).
+  have HWPG : GetTotal S V l -> PutTotal S V l -> GP S V l -> GI S V l -> WPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGP : GP S V l. by move => [] [];firstorder.
+  have HGI : GI S V l. by move => [] [] [];firstorder.
+  have HnotWPG : ~ WPG S V l.
+  by move => HW;move:(HW false true b c (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma PgetTputUDnotWPG : ~[ UD ===>p WPG].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b =>
+   match b with
+   |false => None
+   |true => Some false
+   end) 
+    (fun x => Some match x with
+      | (false, false) => false
+      | _ => true
+     end)
+  ).
+  have HWPG : PutTotal S V l -> UD S V l -> WPG S V l := H S V _ _ l.
+  have HPT : PutTotal S V l. by [].
+  have HUD : UD S V l. by move => [] [] [] [];firstorder.
+  have HnotWPG : ~ WPG S V l.
+  by move => HW;move: (HW false true true false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma PgetTputSGPnotWSS : ~[SGP ===>p WSS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => None) 
+  (fun sv =>
+   match sv with
+   |(false,true) => Some true
+   |_ => Some false
+   end
+   )
+  ).
+  have HWSS : PutTotal S V l -> SGP S V l -> WSS S V l := H S V _ _ l.
+  have PT : PutTotal S V l. by move =>[] [].
+  have HSGP : SGP S V l. by move => [] [] [].
+  have HnotWSS : ~ WSS S V l.
+  by move => HW;move: (HW true false true) => [v HJ]; firstorder.
+  firstorder.
+Qed.
+
+Lemma PgetTputSGPnotPS : ~[SGP ===>p PS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => None) 
+  (fun sv => Some true)
+  ).
+  have HPS : PutTotal S V l -> SGP S V l -> PS S V l := H S V _ _ l.
+  have PT : PutTotal S V l. by [].
+  have HSGP : SGP S V l. by [].
+  have HnotPS : ~ PS S V l.
+  by move => HW; move :(HW false) => [s' [v HJ]].
+  firstorder.
+Qed.
+
+Lemma TgetPputGIandGPGnotGP : ~[GI &&& GPG ===>g GP].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some b)
+  (fun sv => None)
+  ).
+  have HGP : GetTotal S V l -> GI S V l -> GPG S V l -> GP S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have HGI : GI S V l. by move => [] [] [];firstorder.
+  have HGPG : GPG S V l. by move => [] [] [];firstorder.
+  have HnotGP : ~ GP S V l.
+  by move => HW;move :(HW true true erefl).
+ firstorder.
+Qed.
+
+Lemma TgetPputUDnotPS : ~[UD ===>g PS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some false)
+  (fun sv => None)
+  ).
+  have HPS : GetTotal S V l -> UD S V l -> PS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have HUD : UD S V l. by move => [] [] [] []; firstorder.
+  have HnotPS : ~ PS S V l.
+  by move => HW;move: (HW true) => [s' [v HJ]].
+  firstorder.
+Qed.
+
+Lemma TgetTputVDandGSnotGPG : ~[VD &&& GS ===>pg GPG].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b =>
+   match b with
+   |false => Some true
+   |true => Some false
+   end)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some false
+   |(_,true) => Some true
+  end)
+  ).
+  have HGPG : GetTotal S V l -> PutTotal S V l -> VD S V l -> GS S V l -> GPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HVD : VD S V l. by move => [] [] [] [] []; firstorder.
+  have HGS : GS S V l. rewrite / GS ;case => /=.
+  exists false; firstorder.
+  exists true;firstorder.
+  have HnotGPG : ~ GPG S V l.
+  by move => HW;move: (HW true false false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputWPGandGSnotGPG : ~[WPG &&& GS ===>pg GPG].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some b)
+  (fun sv =>
+   match sv with
+   |(false,_) => Some true
+   |(true,_) => Some false
+  end)
+  ).
+  have HGPG : GetTotal S V l -> PutTotal S V l -> WPG S V l -> GS S V l -> GPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
+  have HGS : GS S V l. rewrite / GS ;case => /=.
+  exists true; firstorder.
+  exists false; firstorder.
+  have HnotGPG : ~ GPG S V l.
+  by move => HW ; move:(HW true false true(conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputGPGandVDandGSnotWPG : ~[GPG &&& VD &&& GS ===>pg WPG].
+Proof.
+  move => H. set (S := Dom3). set (V := bool).
+  set (l :=
+  @mkLens Dom3 bool
+  (fun b =>
+   match b with
+   |c => Some false
+   |_ => Some true
+   end)
+  (fun sv =>
+   match sv with
+   |(_,true) => Some b
+   |(c,false) => Some c
+   |_ => Some a
+  end)
+  ).
+  have HWPG : GetTotal S V l -> PutTotal S V l -> GPG S V l -> VD S V l -> GS S V l -> WPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGPG : GPG S V l. by move => [] [] [];firstorder.
+  have HVD : VD S V l. by move => [] [] [] [] [];firstorder.
+  have HGS : GS S V l. rewrite / GS ; case => /=.
+  exists a ; firstorder.
+  exists c ; firstorder.
+  have HnotWPG : ~ WPG S V l.
+  by move => HW;move : (HW a a false true (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputGPGandWPGnotGS : ~[GPG &&& WPG ===>pg GS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some true)
+  (fun sv =>
+   match sv with
+   |(false,_) => Some false
+   |(true,_) => Some true
+  end)
+  ).
+  have HGS : GetTotal S V l -> PutTotal S V l -> GPG S V l -> WPG S V l -> GS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGPG : GPG S V l. by move => [] [] [];firstorder.
+  have HWPG : WPG S V l. by move => [] [] [] [] ; firstorder.
+  have HnotGS : ~ GS S V l.
+  by move => HW;move: (HW false) => [s HJ].
+  firstorder.
+Qed.
+
+
+Lemma TgetTputGPGandVDnotGS : ~[GPG &&& VD ===>pg GS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some true)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+  end)
+  ).
+  have HGS : GetTotal S V l -> PutTotal S V l -> GPG S V l -> VD S V l -> GS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGPG : GPG S V l. by move => [] [] []; firstorder.
+  have HVD : VD S V l. by move => [] [] [] [] [];firstorder.
+  have HnotGS : ~ GS S V l.
+  by move => HW;move: (HW false) => [s HJ].
+  firstorder.
+Qed.
+
+Lemma TgetTputGPGandWPGandGSnotPI : ~[GPG &&& WPG &&& GS ===>pg PI].
+Proof.
+  move => H.
+  set (S := bool).
+  set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b =>
+   match b with
+   |false => Some true
+   |true => Some false
+   end)
+  (fun sv =>
+   match sv with
+   |(true,false) => Some true
+   |_ => Some false
+  end)
+  ).
+  have HPI : GetTotal S V l -> PutTotal S V l -> GPG S V l -> WPG S V l -> GS S V l -> PI S V l:= H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HGPG : GPG S V l. by move => [] [] [];firstorder.
+  have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
+  have HGS : GS S V l. rewrite /GS ;case => /=.
+  exists false; firstorder.
+  exists true; firstorder.
+  have HnotPI : ~ PI S V l.
+  by move => HW; move: (HW false false false true (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma PgetTputWPGandVDnotPG : ~[WPG &&& VD ===>p PG].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => None)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+  end)
+  ).
+  have HPG : PutTotal S V l -> WPG S V l -> VD S V l -> PG S V l := H S V _ _ l.
+  have PT : PutTotal S V l. by move => [] [].
+  have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
+  have HVD : VD S V l. by move => [] [] [] [] [];firstorder.
+  have HnotPG : ~ PG S V l.
+  by move => HW; move :(HW true true false erefl).
+  firstorder.
+Qed.
+
+Lemma TgetPputPGnotGS : ~[PG ===>g GS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some true)
+  (fun _ => None)
+  ).
+  have HGS : GetTotal S V l -> PG S V l -> GS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by [].
+  have HPG : PG S V l. by move => [] [] [];firstorder.
+  have HnotGS : ~ GS S V l.
+  by move => HW;move: (HW false) => [s HJ].
+  firstorder.
+Qed.
+
+Lemma TputWSSnotPT : ~[WSS ===>p PT].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some true)
+  (fun sv =>
+   match sv with
+   |(false,false) => Some true
+   |(true,true) => Some true
+   |_ => Some false
+  end)
+  ).
+  have HPT : PutTotal S V l -> WSS S V l -> PT S V l := H S V _ _ l.
+  have Pt : PutTotal S V l. by move => [] [].
+  have HWSS : WSS S V l. rewrite / WSS ; case => /=.
+  exists (true); firstorder.
+  exists (true); firstorder.
+  have HnotPT : ~ PT S V l.
+  by move => HW;move : (HW false true false erefl).
+  firstorder.
+Qed.
+
+Lemma TputPTnotPP : ~[PT ===>p PP].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some true)
+  (fun sv =>
+   match sv with
+   |(false,true) => Some false
+   |_ => Some true
+  end)
+  ).
+  have HPP : PutTotal S V l -> PT S V l -> PP S V l := H S V _ _ l.
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPT : PT S V l. by move => [] [] [].
+  have HnotPP : ~PP S V l.
+  by move => HW ; move :  (HW false true true false true (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma PputPPnotWSS : ~[PP ===> WSS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some false)
+  (fun sv =>
+   match sv with
+   |(false,false) => Some false
+   |(false,true) => Some true
+   |_ => None
+  end)
+  ).
+  have HWSS : PP S V l -> WSS S V l := H S V _ _ l.
+  have HPP : PP S V l. by move => [] [] [] [] [];firstorder.
+  have HnotWSS : ~WSS S V l.
+  by move => HW ; move : (HW true false true) => [v HJ];firstorder.
+  firstorder.
+Qed.
+
+Lemma TgetTputSGPnotPI : ~[SGP ===>pg PI].
+Proof.
+  move => H. set (S := bool). set (V := Dom3).
+  set (l :=
+  @mkLens bool Dom3
+  (fun b =>
+   match b with
+   |false => Some a
+   |true => Some c
+   end)
+  (fun sv =>
+   match sv with
+   |(_,c) => Some true
+   |_ => Some false
+  end)
+  ).
+  have HPI : GetTotal S V l -> PutTotal S V l -> SGP S V l -> PI S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HSGP : SGP S V l. by move => [] [] [].
+  have HnotPI : ~ PI S V l.
+  by move => HW; move : (HW false false a b (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetPputSGPnotGS : ~[SGP ===>pg GS].
+Proof.
+  move => H. set (S := bool). set (V := Dom3).
+  set (l :=
+  @mkLens bool Dom3
+  (fun b =>
+   match b with
+   |false => Some c
+   |true => Some a
+   end)
+  (fun sv =>
+   match sv with
+   |(_,a) => Some true
+   |_ => Some false
+  end)
+  ).
+  have HGS : GetTotal S V l -> PutTotal S V l -> SGP S V l -> GS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have PT : PutTotal S V l. by move => [] [].
+  have HSGP : SGP S V l. by move => [] [] [].
+  
+  have HnotGS : ~ GS S V l.
+  move=> HW; case: (HW b) => [[]] //.
+  firstorder. 
+Qed.
+
+Lemma TgetPputSGPnotPT : ~[SGP ===>pg PT].
+Proof.
+  move => H. set (S := bool). set (V := Dom3).
+  set (l :=
+  @mkLens bool Dom3
+  (fun B =>
+   match B with
+   |false => Some a
+   |true => Some b
+   end)
+  (fun sv =>
+   match sv with
+   |(_,a) => Some false
+   |(true , c) => Some false
+   |_ => Some true
+  end)
+  ).
+  have HPT : GetTotal S V l -> PutTotal S V l -> SGP S V l -> PT S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HSGP : SGP S V l. by move => [] [] [].
+  have HnotPT : ~ PT S V l.
+  by move => HW ; move : (HW true false c erefl).
+  firstorder.
+Qed.
+
+Lemma TgetTputPGnotGI : ~[PG ===>pg GI].
+Proof.
+  move => H. set (S := Dom3). set (V := bool).
+  set (l :=
+  @mkLens Dom3 bool
+  (fun b =>
+   match b with
+   |c => Some true
+   |_ => Some false
+   end)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some a
+   |(_,true) => Some c
+  end)
+  ).
+  have HGI : GetTotal S V l -> PutTotal S V l -> PG S V l -> GI S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPG : PG S V l. by move => [] [] [].
+  have HnotGI : ~ GI S V l.
+  by move => HW;move : (HW a b false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputPGnotWSS : ~[PG ===>pg WSS].
+Proof.
+  move => H. set (S := Dom3). set (V := bool).
+  set (l :=
+  @mkLens Dom3 bool
+  (fun b =>
+   match b with
+   |b => Some true
+   |_ => Some false
+   end)
+  (fun sv =>
+   match sv with
+   |(_,true) => Some b
+   |(a,false) => Some c
+   |_ => Some a
+  end)
+  ).
+  have HWSS : GetTotal S V l -> PutTotal S V l -> PG S V l -> WSS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPG : PG S V l. by move => [] [] [].
+  have HnotWSS : ~ WSS S V l.
+  by move=> HW; case: (HW c a false) => [v HJ]; case: v HJ => //= Hj; move : (Hj erefl).
+  firstorder.
+Qed.
+
+Lemma TgetTputPGnotPS : ~[PG ===>pg PS].
+Proof.
+  move => H. set (S := Dom3). set (V := bool).
+  set (l :=
+  @mkLens Dom3 bool
+  (fun b =>
+   match b with
+   |b => Some true
+   |_ => Some false
+   end)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some c
+   |(_,true) => Some b
+  end)
+  ).
+  have HPS : GetTotal S V l -> PutTotal S V l -> PG S V l -> PS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPG : PG S V l. by move => [] [] [].
+  have HnotPS : ~PS S V l.
+  by move => HW; move: (HW a) => [s' [v HJ]] ;case s',v.
+  firstorder.
+Qed.
+
+Lemma TgetTputPPnotGI : ~[PP ===>pg GI].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some false)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+  end)
+  ).
+  have HGI : GetTotal S V l -> PutTotal S V l -> PP S V l -> GI S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPP : PP S V l. by move => [] [] [] [] [];firstorder.
+  have HnotGI : ~ GI S V l.
+  by move => HW;move : (HW true false false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputPPnotGPG : ~[PP ===>pg GPG].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b =>
+   match b with
+   |false => Some true
+   |true => Some false
+  end)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some false
+   |(_,true) => Some true
+  end)
+  ).
+  have HGPG : GetTotal S V l -> PutTotal S V l -> PP S V l -> GPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPP : PP S V l. by move => [] [] [];firstorder.
+  have HnotGPG : ~GPG S V l.
+  by move => HW ;move : (HW false true true (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputPPnotPGP : ~[PP ===>pg PGP].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some false)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+  end)
+  ).
+  have HPGP : GetTotal S V l -> PutTotal S V l -> PP S V l -> PGP S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPP : PP S V l. by move => [] [] [];firstorder.
+  have HnotPGP : ~PGP S V l.
+  by move => HW ; move : (HW false false true false (conj erefl erefl)).
+  firstorder.
+Qed.
+
+Lemma TgetTputPPnotPS : ~[PP ===>pg PS].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun _ => Some false)
+  (fun _ => Some true)).
+  have HPS : GetTotal S V l -> PutTotal S V l -> PP S V l -> PS S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPP : PP S V l. by move => [] [] [] ;firstorder.
+  have HnotPS : ~PS S V l.
+  by move => HW;move: (HW false) => [s [v HJ]];case s,v.
+  firstorder.
+Qed.
+
+Lemma TgetTputPPnotWPG : ~[PP ===>pg WPG].
+Proof.
+  move => H. set (S := bool). set (V := bool).
+  set (l :=
+  @mkLens bool bool
+  (fun b => Some false)
+  (fun sv =>
+   match sv with
+   |(_,false) => Some true
+   |(_,true) => Some false
+  end)
+  ).
+  have HWPG : GetTotal S V l -> PutTotal S V l -> PP S V l -> WPG S V l := H S V _ _ l.
+  have GT : GetTotal S V l. by move => [].
+  have Pt : PutTotal S V l. by move => [] [].
+  have HPP : PP S V l. by move => [] [] [];firstorder.
+  have HnotWPG : ~WPG S V l.
+  by move => HW;move: (HW false false true false (conj erefl erefl)).
+  firstorder.
+Qed.
 
