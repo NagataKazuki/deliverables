@@ -18,9 +18,9 @@ Arguments p_put {S V} _ _.
 Class inhabited (T : Type) := Inhabited { inhab : T }.
 Instance inhabited_bool : inhabited bool :=
   {| inhab := true |}.
+
 Instance inhabited_nat : inhabited nat :=
   {| inhab := 0 |}.
-
 
 Section LensLaws.
 
@@ -110,6 +110,22 @@ Definition PI : Prop :=
   forall (s s' : S) (v v' : V),
     put(s, v) = Some s' /\ put(s, v') = Some s' ->
     v = v'.
+
+Definition NEG : Prop :=
+  exists (s : S),
+    get s <> None.
+
+Definition NEP : Prop :=
+  exists (s : S) (v : V),
+    put (s,v) <> None.
+
+Definition NEP2 : Prop :=
+  forall (s : S), exists (v : V),
+    put (s,v) <> None.
+
+Definition NEP3 : Prop :=
+  forall (v : V),exists (s : S),
+    put (s,v) <> None.
 
 End LensLaws.
 
@@ -412,6 +428,85 @@ Notation "[ L1 &&& .. &&& Ln ===>pg L ]" :=
   (at level 60,
    format "[ L1  &&&  ..  &&&  Ln  ===>pg L ]").
 
+Notation "[ L1 &&& .. &&& Ln ===>g_nep L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> NEP S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g_nep  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>g_nep2 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> NEP2 S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g_nep2  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>g_nep3 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> NEP3 S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g_nep3  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>p_neg L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     PutTotal S V l -> NEG S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>p_neg L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>neg L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>neg L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>nep L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEP S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>nep L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>nep2 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEP2 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>nep2 L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>nep3 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEP3 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>nep3 L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>negp L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> NEP S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>negp L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>negp2 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> NEP2 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>negp2 L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>negp3 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> NEP3 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>negp3 L ]").
+
+Lemma g : [PG &&& NEP3 ===> GS].
+Proof.
+  move => S V hs hv l HPG HNEP3 v.
+  unfold PG in HPG;unfold NEP3 in HNEP3.
+  move: (HNEP3 v) => [s Hs].
+  case E: (p_put l (s,v)) Hs => [s'|] Hs.
+  exists s'.
+  exact: (HPG s s' v E).
+  firstorder.
+Qed.
 
 Lemma TgetPputGP_SS : [GP ===>g SS].
 Proof.
@@ -1488,7 +1583,7 @@ Proof.
   firstorder.
 Qed.
 
-Lemma g : ~[GI &&& GS &&& VD &&& PS ===>pg WSS].
+Lemma TgetTputGIandGSandVDandPSnotWSS : ~[GI &&& GS &&& VD &&& PS ===>pg WSS].
 Proof.
  move => H. set (Sv := nat). set (Vv := nat).
   set (l :=
@@ -1562,9 +1657,15 @@ Proof.
 
   have HnotWSS : ~ WSS Sv Vv l. unfold WSS.
   move => HW. move : (HW (S 0) 0 0) => [v HJ]. firstorder.
-  destruct v. discriminate. discriminate. firstorder.
+  destruct v. discriminate. discriminate. by apply: HnotWSS;
+   apply: (HWSS inhabited_nat inhabited_nat).
+Qed.
+
+
 
 Lemma TgetTputUDandPGnotWSS : ~[UD &&& PG ===>pg WSS].
+
+
 Lemma TgetTputGIandUDandGSnotWSS : ~[GI &&& UD &&& GS ===>pg WSS].
 Lemma TgetTputGIandVDandGSnotWSS : ~[GI &&& VD &&& GS ===>pg WSS].
 Lemma TgetTputGIandGSandVDandPSnotWSS : ~[GI &&& GS &&& VD &&& PS ===>pg WSS].
@@ -1574,7 +1675,7 @@ Lemma PgetTputGPandUDandWPGandGIandPIandGSnotWSS : ~[GP &&& UD &&& WPG &&& GI &&
 Lemma PgetTputSGPandVDnotWSS : ~[SGP &&& VD ===>p WSS].
 Lemma TgetPputPSandPGandGSandPPnotWSS : ~[PS &&& PG &&& GS &&& PP ===>g WSS].
 Lemma TgetTputUDandPGnotWSS : ~[UD &&& PG ===> WSS].
-Lemma PgetPputUDandPGandGSandPSandPPnotWSS : ~[UD &&& PG &&& GS &&& PS &&& PP ===> WSS].
+Lemma PgetPputUDandPGandGSandPSandPPnotWSS : ~[UD &&& PG &&& GS &&& PS &&& PP ===>g WSS].
 (*PS mo hairu kanousei ga aru*)
 
 Lemma TgetTputGPandGIandPIandGSnotPT : ~[GP &&& GI &&& PI &&& GS ===>pg PT].
@@ -1593,7 +1694,13 @@ Lemma TgetTputGPandPGandUDandPTnotPP : ~ [GP &&& PG &&& UD &&& PT ===>pg PP].
 
 Lemma PgetTputSGPandSSandVDandPTnotPP : ~ [SGP &&& SS &&& VD &&& PT ===>p PP].
 
+
+Lemma PgetPputSGPandSSandVDandPTnotPP : ~ [SGP &&& SS &&& VD &&& PT ===> PP].
+Lemma PgetPputGPandPGandGSandUDandSSandPTnotPP : ~ [GP &&& PG &&& GS &&& UD &&& SS &&& PT ===>pg PP].
+
+Lemma TgetTputSGPandPPnotPI : ~[SGP &&& PP ===>pg PI].
 Lemma TgetTputGPandUDandGIandGSandPPnotPI : ~[GP &&& UD &&& GI &&& GS &&& PP ===>pg PI].
+
 
 Lemma TgetTputGPandGIandGSandPInotVD : ~[GP &&& GI &&& GS &&& PI ===>pg VD].
 
