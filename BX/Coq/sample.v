@@ -4,6 +4,9 @@ Declare ML Module "bx_plugin".
 Require Import Setoid.
 Require Import ssreflect ssrfun ssrbool.
 
+From Stdlib.Lists Require Import List.
+Import ListNotations.
+
 Record Lens (S V : Type):= mkLens{
   p_get : S -> option V;
   p_put : S * V -> option S;
@@ -27,11 +30,21 @@ Inductive Dom3 : Type :=
 Inductive Dom4 : Type :=
 | A | B | C | D.
 
-  Lemma test_lemma : forall (x : bool), x = x.
+Inductive toolLens : Type :=
+| sgp | gp | pg | pp | wpg | pgp
+| gpg | ud | gi | gs | pt | ss
+| wss | ps | vd | pi
+| notsgp | notgp | notpg | notpp | notwpg | notpgp
+| notgpg | notud | notgi | notgs | notpt | notss
+| notwss | notps | notvd | notpi
+| neg | nep | nep2 | nep3
+| tg | tp.
+
+Lemma test_lemma : forall (x : bool), x = x.
 Proof.
   intros x.
   
-  bx_test.
+  bx_test [ tg ; tp ; gp ; pg ; notsgp].
 
 Section LensLaws.
 
@@ -292,12 +305,4 @@ Ltac ce_lens S V p_get p_put :=
   unfold_laws=> /=;
   intro_all.
 
-Inductive toolLens : Type :=
-| sgp | gp | pg | pp | wpg | pgp
-| gpg | ud | gi | gs | pt | ss
-| wss | ps | vd | pi
-| notsgp | notgp | notpg | notpp | notwpg | notpgp
-| notgpg | notud | notgi | notgs | notpt | notss
-| notwss | notps | notvd | notpi
-| neg | nep | nep2 | nep3
-| tg | tp.
+

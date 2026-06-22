@@ -5,10 +5,96 @@ let _ = Mltop.add_known_module "bx_plugin"
 open Ltac_plugin
 open Constr
 open Names
+open Stdarg
+
+let get_constructor_name (c : Constr.t) : string option =
+  match Constr.kind c with
+  | Construct (((mind, ind_idx), cons_idx), _) ->
+      let env = Global.env () in
+      let mib = Environ.lookup_mind mind env in
+      let mip = mib.Declarations.mind_packets.(ind_idx) in
+      let cons_name_id = mip.Declarations.mind_consnames.(cons_idx - 1) in
+      Some (Names.Id.to_string cons_name_id)
+  | _ -> None
+
+let keyword_to_string (c : Constr.t) : string option =
+  match get_constructor_name c with
+  | Some name ->
+      begin match name with
+      | "sgp" -> Some "SGP"
+      | "gp" -> Some "GP"
+      | "pg" -> Some "PG"
+      | "pp" -> Some "PP"
+      | "wpg" -> Some "WPG"
+      | "pgp" -> Some "PGP"
+      | "gpg" -> Some "GPG"
+      | "ud" -> Some "UD"
+      | "gi" -> Some "GI"
+      | "gs" -> Some "GS"
+      | "pt" -> Some "PT"
+      | "ss" -> Some "SS"
+      | "wss" -> Some "WSS"
+      | "ps" -> Some "PS"
+      | "vd" -> Some "VD"
+      | "pi" -> Some "PI"
+      | "notsgp" -> Some "NotSGP"
+      | "notgp" -> Some "NotGP"
+      | "notpg" -> Some "NotPG"
+      | "notpp" -> Some "NotPP"
+      | "notwpg" -> Some "NotWPG"
+      | "notpgp" -> Some "NotPGP"
+      | "notgpg" -> Some "NotGPG"
+      | "notud" -> Some "NotUD"
+      | "notgi" -> Some "NotGI"
+      | "notgs" -> Some "NotGS"
+      | "notpt" -> Some "NotPT"
+      | "notss" -> Some "NotSS"
+      | "notwss" -> Some "NotWSS"
+      | "notps" -> Some "NotPS"
+      | "notvd" -> Some "NotVD"
+      | "notpi" -> Some "NotPI"
+      | "neg" -> Some "NEG"
+      | "nep" -> Some "NEP"
+      | "nep2" -> Some "NEP2"
+      | "nep3" -> Some "NEP3"
+      | "tg" -> Some "tG"
+      | "tp" -> Some "tP"
+      | _ -> None
+      end
+  | None -> None
+
+type rocq_list_view =
+  | RocqNil
+  | RocqCons of Constr.t * Constr.t
+  | NotList
+
+let view_rocq_list (c : Constr.t) : rocq_list_view =
+  match Constr.kind c with
+  | Construct _ ->
+      if get_constructor_name c = Some "nil" then RocqNil else NotList
+  | App (f, args) ->
+      if get_constructor_name f = Some "nil" then RocqNil
+      else if get_constructor_name f = Some "cons" && Array.length args >= 3 then
+        RocqCons (args.(1), args.(2))
+      else NotList
+  | _ -> NotList
+
+let rec rocq_list_to_string_list (c : Constr.t) : string list =
+  match view_rocq_list c with
+  | RocqNil -> []
+  | RocqCons (rocqkey, rocqlist) ->
+      begin match keyword_to_string rocqkey with
+      | None -> failwith "Keyword Error: Unrecognized Rocq constructor"
+      | Some x -> x :: (rocq_list_to_string_list rocqlist)
+      end
+  | NotList -> failwith "Error: Not a valid Rocq list structure"
+
+
 
 let call_csharp_generator (keywords : string list) : string =
-  let safe_keywords = List.map Filename.quote keywords in
-  let keywords_args = String.concat " " safe_keywords in
+  
+  let joined_keywords = String.concat " " keywords in
+  let keywords_args = Filename.quote joined_keywords in
   
   let project_path = "/home/kazuki/deliverables/BX/tool/tool" in
   let cmd = Printf.sprintf "/usr/bin/dotnet run --project %s -- %s" project_path keywords_args in
@@ -46,30 +132,34 @@ let call_csharp_generator (keywords : string list) : string =
       Feedback.msg_notice (Pp.str "Error: 'set' not found in output");
       ""
 
-let bx_test_tactic : unit Proofview.tactic =
+let bx_test_tactic (c_expr : EConstr.t) : unit Proofview.tactic =
   Proofview.Goal.enter (fun gl ->
     
-    let test_array = ["tG"; "tP"; "GP"; "PG"; "NotSGP"] in
+    let sigma = Proofview.Goal.sigma gl in
+    
+    let c = EConstr.to_constr sigma c_expr in
+
+    let test_array = rocq_list_to_string_list c in
 
     let generated_str = call_csharp_generator test_array in
     
     let raw_tac_ast = Procq.parse_string Pltac.tactic generated_str in
-
     let ist = Tacintern.make_empty_glob_sign ~strict:false in
-    
     let glob_tac_expr = Tacintern.intern_pure_tactic ist raw_tac_ast in
-
+    
     Tacinterp.eval_tactic glob_tac_expr
   )
 
 
 let () = Tacentries.tactic_extend "bx_plugin" "bx_test" ~level:0 [(Tacentries.TyML (
                                                                    Tacentries.TyIdent ("bx_test", 
-                                                                   Tacentries.TyNil), 
-                                                                   (fun ist
+                                                                   Tacentries.TyArg (
+                                                                   Extend.TUentry (Genarg.get_arg_tag wit_constr), 
+                                                                   Tacentries.TyNil)), 
+                                                                   (fun c ist
                                                                    -> 
                                                                    
-# 66 "bx_plugin.mlg"
-                     bx_test_tactic 
+# 154 "bx_plugin.mlg"
+                               bx_test_tactic c 
                                                                    )))]
 

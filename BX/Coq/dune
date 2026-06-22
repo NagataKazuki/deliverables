@@ -3,5 +3,5 @@
  (package bx_plugin)
  (plugins bx_plugin)
  (generate_project_file)
- (theories bx_plugin)
+ (theories bx_plugin Stdlib)
 )

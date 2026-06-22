@@ -33,5 +33,6 @@
 -R /home/kazuki/.opam/default/lib/coq/theories Corelib
 -Q ../bx_plugin bx_plugin
 -Q ../_build/default/bx_plugin bx_plugin
+-Q /home/kazuki/.opam/default/lib/coq/user-contrib/Stdlib Stdlib
 -R . bx_plugin.Coq
 -R ../_build/default/Coq bx_plugin.Coq
