@@ -1,0 +1,67 @@
+DECLARE PLUGIN "bx_plugin"
+
+{
+open Ltac_plugin
+open Constr
+open Names
+
+let call_csharp_generator (keywords : string list) : string =
+  let safe_keywords = List.map Filename.quote keywords in
+  let keywords_args = String.concat " " safe_keywords in
+  
+  let project_path = "/home/kazuki/deliverables/BX/tool/tool" in
+  let cmd = Printf.sprintf "/usr/bin/dotnet run --project %s -- %s" project_path keywords_args in
+  
+  let env = Unix.environment () in
+  let (in_chan, out_chan, err_chan) = Unix.open_process_full cmd env in
+  
+  let read_all ch =
+    let rec loop acc =
+      try loop (input_line ch :: acc)
+      with End_of_file -> List.rev acc
+    in loop []
+  in
+  let out_lines = read_all in_chan in
+  let err_lines = read_all err_chan in
+  ignore (Unix.close_process_full (in_chan, out_chan, err_chan));
+  
+  Feedback.msg_notice (Pp.str ("Executing: " ^ cmd));
+  Feedback.msg_notice (Pp.str ("STDOUT: " ^ String.concat "\n" out_lines));
+  Feedback.msg_notice (Pp.str ("STDERR: " ^ String.concat "\n" err_lines));
+  
+  let full_output = String.concat " " out_lines in
+  let rec find_set_start s i =
+    if i > String.length s - 3 then None
+    else if String.sub s i 3 = "set" then Some i
+    else find_set_start s (i + 1)
+  in
+  
+  match find_set_start full_output 0 with
+  | Some idx -> 
+      let extracted = String.sub full_output idx (String.length full_output - idx) in
+      Feedback.msg_notice (Pp.str ("Extracted for Rocq: " ^ extracted));
+      extracted
+  | None -> 
+      Feedback.msg_notice (Pp.str "Error: 'set' not found in output");
+      ""
+
+let bx_test_tactic : unit Proofview.tactic =
+  Proofview.Goal.enter (fun gl ->
+    
+    let test_array = ["tG"; "tP"; "GP"; "PG"; "NotSGP"] in
+
+    let generated_str = call_csharp_generator test_array in
+    
+    let raw_tac_ast = Procq.parse_string Pltac.tactic generated_str in
+
+    let ist = Tacintern.make_empty_glob_sign ~strict:false in
+    
+    let glob_tac_expr = Tacintern.intern_pure_tactic ist raw_tac_ast in
+
+    Tacinterp.eval_tactic glob_tac_expr
+  )
+}
+
+TACTIC EXTEND bx_test
+| [ "bx_test" ] -> { bx_test_tactic }
+END

@@ -1,0 +1,37 @@
+(lang dune 3.23)
+(name bx_plugin)
+(sections (lib .) (lib_root ..) (libexec .))
+(files
+ (lib
+  (META
+   bx_plugin.a
+   bx_plugin.cma
+   bx_plugin.cmi
+   bx_plugin.cmt
+   bx_plugin.cmx
+   bx_plugin.cmxa
+   bx_plugin.ml
+   dune-package
+   opam))
+ (lib_root
+  (coq/user-contrib/bx_plugin/Coq/sample.glob
+   coq/user-contrib/bx_plugin/Coq/sample.v
+   coq/user-contrib/bx_plugin/Coq/sample.vo
+   coq/user-contrib/bx_plugin/bx_plugin.glob
+   coq/user-contrib/bx_plugin/bx_plugin.v
+   coq/user-contrib/bx_plugin/bx_plugin.vo))
+ (libexec (bx_plugin.cmxs)))
+(library
+ (name bx_plugin)
+ (kind normal)
+ (archives (byte bx_plugin.cma) (native bx_plugin.cmxa))
+ (plugins (byte bx_plugin.cma) (native bx_plugin.cmxs))
+ (native_archives bx_plugin.a)
+ (requires rocq-runtime.plugins.ltac)
+ (main_module_name Bx_plugin)
+ (modes byte native)
+ (modules
+  (singleton
+   (obj_name bx_plugin)
+   (visibility public)
+   (source (path Bx_plugin) (impl (path bx_plugin.ml))))))

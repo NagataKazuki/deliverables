@@ -1,0 +1,13 @@
+(rule
+ (targets bx_plugin.ml)
+ (deps bx_plugin.mlg)
+ (action (run coqpp %{deps})))
+
+(library
+ (name bx_plugin)
+ (public_name bx_plugin)
+ (libraries coq-core.plugins.ltac))
+
+(rocq.theory
+ (name bx_plugin)
+ (package bx_plugin))

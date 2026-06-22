@@ -1,0 +1,37 @@
+-arg -w
+-arg -deprecated-native-compiler-option
+-arg -w
+-arg -native-compiler-disabled
+-arg -native-compiler
+-arg ondemand
+-arg -boot
+-I /home/kazuki/.opam/default/lib/findlib
+-I /home/kazuki/.opam/default/lib/ocaml/dynlink
+-I /home/kazuki/.opam/default/lib/ocaml/str
+-I /home/kazuki/.opam/default/lib/ocaml/threads
+-I /home/kazuki/.opam/default/lib/ocaml/unix
+-I /home/kazuki/.opam/default/lib/rocq-runtime/boot
+-I /home/kazuki/.opam/default/lib/rocq-runtime/clib
+-I /home/kazuki/.opam/default/lib/rocq-runtime/config
+-I /home/kazuki/.opam/default/lib/rocq-runtime/engine
+-I /home/kazuki/.opam/default/lib/rocq-runtime/gramlib
+-I /home/kazuki/.opam/default/lib/rocq-runtime/interp
+-I /home/kazuki/.opam/default/lib/rocq-runtime/kernel
+-I /home/kazuki/.opam/default/lib/rocq-runtime/lib
+-I /home/kazuki/.opam/default/lib/rocq-runtime/library
+-I /home/kazuki/.opam/default/lib/rocq-runtime/parsing
+-I /home/kazuki/.opam/default/lib/rocq-runtime/perf
+-I /home/kazuki/.opam/default/lib/rocq-runtime/plugins/ltac
+-I /home/kazuki/.opam/default/lib/rocq-runtime/pretyping
+-I /home/kazuki/.opam/default/lib/rocq-runtime/printing
+-I /home/kazuki/.opam/default/lib/rocq-runtime/proofs
+-I /home/kazuki/.opam/default/lib/rocq-runtime/tactics
+-I /home/kazuki/.opam/default/lib/rocq-runtime/vernac
+-I /home/kazuki/.opam/default/lib/rocq-runtime/vm
+-I /home/kazuki/.opam/default/lib/zarith
+-I ../_build/default/bx_plugin
+-R /home/kazuki/.opam/default/lib/coq/theories Corelib
+-Q ../bx_plugin bx_plugin
+-Q ../_build/default/bx_plugin bx_plugin
+-R . bx_plugin.Coq
+-R ../_build/default/Coq bx_plugin.Coq

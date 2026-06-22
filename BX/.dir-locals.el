@@ -1,0 +1,1 @@
+((coq-mode . ((default-directory . "~/deliverables/BX/"))))
