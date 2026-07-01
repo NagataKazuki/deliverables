@@ -80,7 +80,37 @@ partial class Program
         {"NEP3", LensLaws.NEP3 }
     };
 
-    static void srint(Domain S, Domain V, VarPool vars, Dictionary<int, bool> model)
+        static String HRocq(string[] name)
+    {
+        string t = $"have H{name[name.Length - 1].Replace("Not","")} : ";
+        for (int i = 0; i < name.Length; ++i)
+        {
+            if (name[i] == "tG")
+            {
+                t += "GetTotal S V l";
+            }
+            else if (name[i] == "tP")
+            {
+                t += "PutTotal S V l";
+            }
+            else if (name[i].Contains("Not"))
+            {
+                t += $"{name[i].Replace("Not","")} S V l";
+            }
+            else
+            {
+                t += $"{name[i]} S V l";
+            }
+
+            if (i < name.Length - 1)
+            {
+                t += " -> ";
+            }
+        }
+        return t;
+    }
+
+    static void srint(Domain S, Domain V, VarPool vars, Dictionary<int, bool> model,string[] name)
     {
     String SType = "Dom4";
     String VType = "Dom4"; 
@@ -154,8 +184,8 @@ partial class Program
                 Rocqlens += $"|({t[s]},{w[v]}) => None";
             }
         }
-    Rocqlens += " end))";
-    Console.WriteLine(Rocqlens);
+        Rocqlens += " end))";
+        Console.WriteLine(Rocqlens);
     }
 
     static void Main(string[] args)
@@ -193,7 +223,7 @@ partial class Program
                 else
                 {
                    var model = ParseModel(z3out);
-                   srint(S, V, vars, model);
+                   srint(S, V, vars, model,input);
                    return;
                 }
             }

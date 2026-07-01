@@ -1,11 +1,11 @@
-From bx_plugin Require Import bx_plugin.
+From bx_plugin Require Export bx_plugin.
 Declare ML Module "bx_plugin".
 
-Require Import Setoid.
-Require Import ssreflect ssrfun ssrbool.
+Require Export Setoid.
+Require Export ssreflect ssrfun ssrbool.
 
-From Stdlib.Lists Require Import List.
-Import ListNotations.
+From Stdlib.Lists Require Export List.
+Export ListNotations.
 
 Record Lens (S V : Type):= mkLens{
   p_get : S -> option V;
@@ -39,12 +39,6 @@ Inductive toolLens : Type :=
 | notwss | notps | notvd | notpi
 | neg | nep | nep2 | nep3
 | tg | tp.
-
-Lemma test_lemma : forall (x : bool), x = x.
-Proof.
-  intros x.
-  
-  bx_test [ tg ; tp ; gp ; pg ; notsgp].
 
 Section LensLaws.
 
@@ -198,7 +192,6 @@ Definition GetTotal (S V : Type) (l : Lens S V) : Prop :=
 Definition PutTotal (S V : Type) (l : Lens S V) : Prop :=
   forall (s : S) (v : V), l.(p_put) (s,v)<> None.
 
-
 Notation "[ L1 &&& .. &&& Ln ===>g L ]" :=
   (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
      GetTotal S V l ->
@@ -212,11 +205,6 @@ Notation "[ L1 &&& .. &&& Ln ===>p L ]" :=
   (at level 60,
    format "[ L1  &&&  ..  &&&  Ln  ===>p L ]").
 
-Notation "[ L1 &&& .. &&& Ln ===>pg L ]" :=
-  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
-     GetTotal S V l -> PutTotal S V l-> L1 S V l -> .. (Ln S V l -> L S V l) .. )
-  (at level 60,
-   format "[ L1  &&&  ..  &&&  Ln  ===>pg L ]").
 
 Notation "[ L1 &&& .. &&& Ln ===>g_nep L ]" :=
   (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
@@ -295,14 +283,5 @@ Ltac unfold_laws :=
 
 Lemma non_implication (P Q : Prop) : P -> ~ Q -> ~ (P -> Q).
 Proof. firstorder. Qed.
-
-Ltac intro_all :=
-  repeat (move=> ?).
-
-Ltac ce_lens S V p_get p_put :=
-  move=> H;
-  have := H S V (mkLens p_get p_put);
-  unfold_laws=> /=;
-  intro_all.
 
 

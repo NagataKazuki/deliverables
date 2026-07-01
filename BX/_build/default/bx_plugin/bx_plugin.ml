@@ -150,6 +150,63 @@ let bx_test_tactic (c_expr : EConstr.t) : unit Proofview.tactic =
     Tacinterp.eval_tactic glob_tac_expr
   )
 
+let keyword_name_to_string (name : string) : string option =
+  match name with
+  | "sgp" -> Some "SGP"
+  | "gp" -> Some "GP"
+  | "pg" -> Some "PG"
+  | "pp" -> Some "PP"
+  | "wpg" -> Some "WPG"
+  | "pgp" -> Some "PGP"
+  | "gpg" -> Some "GPG"
+  | "ud" -> Some "UD"
+  | "gi" -> Some "GI"
+  | "gs" -> Some "GS"
+  | "pt" -> Some "PT"
+  | "ss" -> Some "SS"
+  | "wss" -> Some "WSS"
+  | "ps" -> Some "PS"
+  | "vd" -> Some "VD"
+  | "pi" -> Some "PI"
+  | "notsgp" -> Some "NotSGP"
+  | "notgp" -> Some "NotGP"
+  | "notpg" -> Some "NotPG"
+  | "notpp" -> Some "NotPP"
+  | "notwpg" -> Some "NotWPG"
+  | "notpgp" -> Some "NotPGP"
+  | "notgpg" -> Some "NotGPG"
+  | "notud" -> Some "NotUD"
+  | "notgi" -> Some "NotGI"
+  | "notgs" -> Some "NotGS"
+  | "notpt" -> Some "NotPT"
+  | "notss" -> Some "NotSS"
+  | "notwss" -> Some "NotWSS"
+  | "notps" -> Some "NotPS"
+  | "notvd" -> Some "NotVD"
+  | "notpi" -> Some "NotPI"
+  | "neg" -> Some "NEG"
+  | "nep" -> Some "NEP"
+  | "nep2" -> Some "NEP2"
+  | "nep3" -> Some "NEP3"
+  | "tg" -> Some "tG"
+  | "tp" -> Some "tP"
+  | _ -> None
+
+let bx_have_tactic (id : Names.Id.t) : unit Proofview.tactic =
+  Proofview.Goal.enter (fun gl ->
+    let raw_name = Names.Id.to_string id in
+    
+    match keyword_name_to_string raw_name with
+    | Some upper_name ->
+        let tac_str = Printf.sprintf "have H%s : %s S V l." raw_name upper_name in
+        let raw_tac_ast = Procq.parse_string Pltac.tactic tac_str in
+        let ist = Tacintern.make_empty_glob_sign ~strict:false in
+        let glob_tac_expr = Tacintern.intern_pure_tactic ist raw_tac_ast in
+        Tacinterp.eval_tactic glob_tac_expr
+    | None -> 
+        CErrors.user_err (Pp.str ("bx_have: keyword error (" ^ raw_name ^ ")"))
+  )
+
 
 let () = Tacentries.tactic_extend "bx_plugin" "bx_test" ~level:0 [(Tacentries.TyML (
                                                                    Tacentries.TyIdent ("bx_test", 
@@ -159,7 +216,19 @@ let () = Tacentries.tactic_extend "bx_plugin" "bx_test" ~level:0 [(Tacentries.Ty
                                                                    (fun c ist
                                                                    -> 
                                                                    
-# 154 "bx_plugin.mlg"
+# 211 "bx_plugin.mlg"
                                bx_test_tactic c 
+                                                                   )))]
+
+let () = Tacentries.tactic_extend "bx_plugin" "bx_have" ~level:0 [(Tacentries.TyML (
+                                                                   Tacentries.TyIdent ("bx_have", 
+                                                                   Tacentries.TyArg (
+                                                                   Extend.TUentry (Genarg.get_arg_tag wit_ident), 
+                                                                   Tacentries.TyNil)), 
+                                                                   (fun id
+                                                                   ist -> 
+                                                                   
+# 215 "bx_plugin.mlg"
+                               bx_have_tactic id 
                                                                    )))]
 

@@ -40,12 +40,6 @@ Inductive toolLens : Type :=
 | neg | nep | nep2 | nep3
 | tg | tp.
 
-Lemma test_lemma : forall (x : bool), x = x.
-Proof.
-  intros x.
-  
-  bx_test [ tg ; tp ; gp ; notsgp].
-
 Section LensLaws.
 
 Variable (S V : Type) (l : Lens S V).
@@ -198,6 +192,13 @@ Definition GetTotal (S V : Type) (l : Lens S V) : Prop :=
 Definition PutTotal (S V : Type) (l : Lens S V) : Prop :=
   forall (s : S) (v : V), l.(p_put) (s,v)<> None.
 
+Lemma test_lemma : forall (x : bool), x = x.
+Proof.
+  intros x.
+  
+  bx_test [ tg ; tp ; gp ; pg ; notsgp].
+
+
 
 Notation "[ L1 &&& .. &&& Ln ===>g L ]" :=
   (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
@@ -212,11 +213,6 @@ Notation "[ L1 &&& .. &&& Ln ===>p L ]" :=
   (at level 60,
    format "[ L1  &&&  ..  &&&  Ln  ===>p L ]").
 
-Notation "[ L1 &&& .. &&& Ln ===>pg L ]" :=
-  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
-     GetTotal S V l -> PutTotal S V l-> L1 S V l -> .. (Ln S V l -> L S V l) .. )
-  (at level 60,
-   format "[ L1  &&&  ..  &&&  Ln  ===>pg L ]").
 
 Notation "[ L1 &&& .. &&& Ln ===>g_nep L ]" :=
   (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),

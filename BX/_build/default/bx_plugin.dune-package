@@ -14,9 +14,15 @@
    dune-package
    opam))
  (lib_root
-  (coq/user-contrib/bx_plugin/Coq/sample.glob
+  (coq/user-contrib/bx_plugin/Coq/TGTP.glob
+   coq/user-contrib/bx_plugin/Coq/TGTP.v
+   coq/user-contrib/bx_plugin/Coq/TGTP.vo
+   coq/user-contrib/bx_plugin/Coq/sample.glob
    coq/user-contrib/bx_plugin/Coq/sample.v
    coq/user-contrib/bx_plugin/Coq/sample.vo
+   coq/user-contrib/bx_plugin/Coq/tac.glob
+   coq/user-contrib/bx_plugin/Coq/tac.v
+   coq/user-contrib/bx_plugin/Coq/tac.vo
    coq/user-contrib/bx_plugin/bx_plugin.glob
    coq/user-contrib/bx_plugin/bx_plugin.v
    coq/user-contrib/bx_plugin/bx_plugin.vo))
