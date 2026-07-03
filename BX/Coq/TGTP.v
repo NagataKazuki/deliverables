@@ -471,6 +471,7 @@ Qed.
 Lemma TgetTputGPGandGSandPInotVD : ~[GPG &&& GS &&& PI ===>pg VD].
 Proof.
   move => H.
+  bx_test [tg;tp;gpg;gs;pi;notvd].
 Qed.
 
 
