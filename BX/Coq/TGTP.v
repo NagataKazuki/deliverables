@@ -245,22 +245,95 @@ Proof.
   move => H.
   bx_test [tg;tp;gi;ss;notpgp].
   have_tg. by move => [].
-have_tp. by move => [] [].
-have_gi. by move => [] [] [];firstorder.
-have_ss. rewrite /SS ;case => /=. exists true; by []. exists false; by [].
-have_notpgp. by move => HW;move: (HW false false false true (conj erefl erefl)). 
-  firstorder.
+  have_tp. by move => [] [].
+  have_gi. by move => [] [] [];firstorder.
+  have_ss. rewrite /SS ;case => /=. exists true; by []. exists false; by [].
+  have_notpgp. by move => HW;move: (HW false false false true (conj erefl erefl)). 
+firstorder.
 Qed.
 
 Lemma TgetTputGPGandSSnotPGP : ~[GPG &&& SS ===>pg PGP].
 Proof.
   move => H.
+  bx_test [tg;tp;gpg;ss;notpgp].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [];firstorder.
+  have_ss. rewrite /SS; case => /=. exists true;by []. exists false ;by [].
+  have_notpgp. by  move => HW; move :(HW false false false true (conj erefl erefl)).
+  apply HnotPGP; apply H. apply inhabited_bool. apply inhabited_bool. apply HTG.
+  apply HTP. apply HGPG. apply HSS.
+Qed.
 
+Lemma TgetTputGIandUDnotWSS : ~[GI &&& UD ===>pg WSS].
+Proof.
+  move => H.
+  bx_test [tg;tp;gi;ud;notwss].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gi.  by move => [] [] [];firstorder.
+  have_ud. by move => [] [] [] [];firstorder.         
+  have_notwss.  by move=> HW; case: (HW true false true) => v /(_ erefl); case: v.  
+  firstorder.  
+Qed.
 
+Lemma TgetTputGPGandUDnotWSS : ~[GPG &&& UD ===>pg WSS].
+Proof.
+  move => H.
+  bx_test[tg;tp;gpg;ud;notwss].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [];firstorder.
+  have_ud. by move => [] [] [] [];firstorder.
+  have_notwss. by move=> HW; case: (HW true false true) => v /(_ erefl); case: v. 
+  apply HnotWSS. apply H. apply inhabited_bool. apply inhabited_bool.  apply HTG. apply HTP.
+  apply HGPG. apply HUD.
+Qed.
 
+Lemma TgetTputGIandWPGandPGPnotPS : ~[GI &&& WPG &&& PGP ===>pg PS].
+Proof.
+  move => H.
+  bx_test [tg;tp;gi;wpg;pgp;notps].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gi. by move => [] [] [];firstorder.
+  have_wpg. by move => [] [] [] [];firstorder.
+  have_pgp. by move => [] [] [] [];firstorder.
+  have_notps. unfold PS. by  move=> HW ;case: (HW false) => s' [v Hv]; case: s' Hv; case: v.
+  firstorder.
+Qed.
 
+Lemma TgetTputGPGandWPGandPGPnotPS : ~[GPG &&& WPG &&& PGP ===>pg PS].
+Proof.
+  move => H.
+  bx_test[tg;tp;gpg;wpg;pgp;notps].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [];firstorder.
+  have_wpg. by move => [] [] [] [];firstorder.
+  have_pgp. by move => [] [] [] [];firstorder.
+  have_notps.  by  move=> HW ;case: (HW false) => s' [v Hv]; case: s' Hv; case: v.  
+  apply HnotPS.  apply H. apply inhabited_bool. apply inhabited_bool.
+  apply HTG. apply HTP. apply HGPG. apply HWPG. apply HPGP.
+Qed.
+
+Lemma TgetTputGPnotWPG : ~[GP &&& GI ===>pg WPG].
+Proof.
+  move => H.
+  bx_test [tg;tp;gp;gi;notwpg].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gp. by move => [] [].
+  have_gi. by move => [] [] [];firstorder.  
+  have_notwpg. unfold WPG.
+  by move => HW;move:(HW true false b a (conj erefl erefl)).
+  firstorder.
+Qed.
 
 End GPfamily.
+
+
+Section PGfamily.
 
 Lemma TgetTputPG_VD : [PG ===>pg VD].
 Proof.
@@ -315,6 +388,97 @@ Proof.
   -reflexivity.
   -exfalso; apply (gt s'); apply H1.
 Qed.
+
+Lemma TgetTputVDandGSnotGPG : ~[VD &&& GS ===>pg GPG].
+Proof.
+  move => H.
+  bx_test[tg;tp;vd;gs;notgpg].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_vd. by move => [] [] [] [] [];firstorder.
+  have_gs. rewrite / GS ;case => /=. exists true; firstorder.  exists false;firstorder.
+  have_notgpg. by move => HW;move: (HW true false true (conj erefl erefl)).
+  apply HnotGPG. apply H. apply inhabited_bool. apply inhabited_bool.
+  apply HTG. apply HTP. apply HVD. apply HGS.
+Qed.  
+
+Lemma TgetTputWPGandGSnotGPG : ~[WPG &&& GS ===>pg GPG].
+Proof.
+  move => H.
+  bx_test [tg;tp;wpg;gs;notgpg].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_wpg. by move => [] [] [] [];firstorder.
+  have_gs.  rewrite / GS ;case => /=. exists false; firstorder.  exists true;firstorder.
+  have_notgpg.  by move => HW;move: (HW true false false (conj erefl erefl)).
+  apply HnotGPG. apply H. apply inhabited_bool. apply inhabited_bool.
+  apply HTG. apply HTP. apply HWPG. apply HGS.
+Qed.
+
+Lemma TgetTputGPGandVDandGSnotWPG : ~[GPG &&& VD &&& GS ===>pg WPG].
+Proof.
+  move => H.
+  bx_test [tg;tp;gpg;vd;gs;notwpg].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [];firstorder.
+  have_vd. by move => [] [] [] [] [];firstorder.
+  have_gs.  rewrite / GS ;case => /=. exists c; firstorder.  exists a;firstorder.
+  have_notwpg. by move => HW;move:(HW a b true false (conj erefl erefl)).
+  apply HnotWPG. apply H. firstorder. apply inhabited_bool.
+  apply HTG. apply HTP. apply HGPG. apply HVD. apply HGS.
+Qed.
+
+Lemma TgetTputGPGandWPGnotGS : ~[GPG &&& WPG ===>pg GS].
+Proof.
+  move => H.
+  bx_test [tg;tp;gpg;wpg;notgs].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [] ;firstorder.
+  have_wpg. by move => [] [] [] [];firstorder.
+  have_notgs. by move=> H_surj; case: (H_surj true) => s; case: s.
+  apply HnotGS. apply H. apply inhabited_bool. apply inhabited_bool.
+  apply HTG. apply HTP. apply HGPG. apply HWPG.
+Qed.
+
+Lemma TgetTputGPGandVDnotGS : ~[GPG &&& VD ===>pg GS].
+Proof.
+  move => H.
+  bx_test [tg;tp;gpg;vd;notgs].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [];firstorder.
+  have_vd. by move => [] [] [] [] [];firstorder.
+  have_notgs. by move=> H_surj; case: (H_surj true) => s; case: s.
+  apply HnotGS. apply H. apply inhabited_bool. apply inhabited_bool.
+  apply HTG. apply HTP. apply HGPG. apply HVD.
+Qed.
+
+Lemma TgetTputGPGandWPGandGSnotPI : ~[GPG &&& WPG &&& GS ===>pg PI].
+Proof.
+  move => H.
+  bx_test [tg;tp;gpg;wpg;gs;notpi].
+  have_tg. by move => [].
+  have_tp. by move => [] [].
+  have_gpg. by move => [] [] [];firstorder.
+  have_wpg. by move => [] [] [] [];firstorder.
+  have_gs.  rewrite / GS ;case => /=. exists true; firstorder.  exists false;firstorder.
+  have_notpi. unfold PI.
+    
+Qed.
+
+Lemma TgetTputGPGandGSandPInotVD : ~[GPG &&& GS &&& PI ===>pg VD].
+Proof.
+  move => H.
+Qed.
+
+
+
+
+
+
+End PGfamily.
 
 Lemma TputPP_PT : [PP ===>pg PT].
 Proof.

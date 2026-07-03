@@ -68,7 +68,7 @@ partial class Program
         {"NotSS",LensLaws.NotSS },
         {"NotWSS", LensLaws.NotWSS},
         {"NotPS", LensLaws.NotPS},
-        {"NotPI",LensLaws.PI },
+        {"NotPI",LensLaws.NotPI },
         {"NotGS",LensLaws.NotGS },
         {"NotGI",LensLaws.NotGI },
         {"NotPT",LensLaws.NotPT },
