@@ -1,10 +1,7 @@
 Require Import Setoid.
-From mathcomp
-Require Import all_ssreflect.
 From mathcomp Require Import ssreflect ssrfun ssrbool.
-From Hammer Require Import Tactics.
-From Hammer Require Import Hammer.
 
+From Coq Require Import extraction.ExtrOcamlString.
 
 Record Lens (S V : Type):= mkLens{
   p_get : S -> option V;
@@ -18,9 +15,9 @@ Arguments p_put {S V} _ _.
 Class inhabited (T : Type) := Inhabited { inhab : T }.
 Instance inhabited_bool : inhabited bool :=
   {| inhab := true |}.
+
 Instance inhabited_nat : inhabited nat :=
   {| inhab := 0 |}.
-
 
 Section LensLaws.
 
@@ -77,7 +74,7 @@ Definition UD : Prop :=
 Definition GI : Prop :=
   forall (s s' : S) (v : V),
     get s = Some v /\ get s' = Some v ->
-    Some s = Some s'.
+    s = s'.
 
 Definition GS : Prop :=
   forall (v : V) ,exists (s : S),
@@ -111,6 +108,22 @@ Definition PI : Prop :=
     put(s, v) = Some s' /\ put(s, v') = Some s' ->
     v = v'.
 
+Definition NEG : Prop :=
+  exists (s : S),
+    get s <> None.
+
+Definition NEP : Prop :=
+  exists (s : S) (v : V),
+    put (s,v) <> None.
+
+Definition NEP2 : Prop :=
+  forall (s : S), exists (v : V),
+    put (s,v) <> None.
+
+Definition NEP3 : Prop :=
+  forall (v : V),exists (s : S),
+    put (s,v) <> None.
+
 End LensLaws.
 
 Notation "[ L1 &&& .. &&& Ln ===> L ]" :=
@@ -136,26 +149,25 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSGP_GI : [SGP ===> GI].
+Lemma PgetPputSGP_GI : [SGP ===> GI].
 Proof.
   move => S V l hs hv SGP s s' v [H1 H2].
-  apply (SGP s s v) in H1;
-  apply (SGP s s' v) in H2;
-  rewrite H1 in H2;
-  apply H2.
+  apply (SGP s s v) in H1.
+  apply (SGP s s' v) in H2.
+  rewrite H1 in H2. inversion H2. reflexivity.
 Qed.
 
-Theorem PgetPputSGP_WPG : [SGP ===> WPG].
+Lemma PgetPputSGP_WPG : [SGP ===> WPG].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSGP_UD : [SGP ===> UD].
+Lemma PgetPputSGP_UD : [SGP ===> UD].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputGP_GPG : [GP ===> GPG].
+Lemma PgetPputGP_GPG : [GP ===> GPG].
 Proof.
   move => S V hs hv l GP s s' v [H1 H2];
   apply GP in H1 as H3;
@@ -165,19 +177,19 @@ Proof.
   apply H1.
 Qed.
 
-Theorem PgetPputGP_PGP : [GP ===> PGP].
+Lemma PgetPputGP_PGP : [GP ===> PGP].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputSS_WSS : [SS ===> WSS].
+Lemma PgetPputSS_WSS : [SS ===> WSS].
 Proof.
   move => S V hs hv l SS s s' v';
   case (SS s) => [v SS1];
   firstorder.
 Qed.
 
-Theorem PgetPputWPGandSS_GP : [WPG &&& SS ===> GP].
+Lemma PgetPputWPGandSS_GP : [WPG &&& SS ===> GP].
 Proof.
   move => S V hs hv l WPG SS s v H;
   case (SS s) => [v' H1];
@@ -185,7 +197,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputUDandSS_GP : [UD &&& SS ===> GP].
+Lemma PgetPputUDandSS_GP : [UD &&& SS ===> GP].
 Proof.
   move => S V hs hv l UD SS s v H;
   case (SS s) => [v' H1];
@@ -193,7 +205,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPGPandUD_GPG : [PGP &&& UD ===> GPG].
+Lemma PgetPputPGPandUD_GPG : [PGP &&& UD ===> GPG].
 Proof.
   move => S V hs hv l PGP UD s s' v [H1 H2];
   move : (UD s s' v v) => H3;
@@ -205,7 +217,7 @@ Proof.
 Qed.
 
 
-Theorem PgetPputPGPandPS_GP : [PGP &&& PS ===> GP].
+Lemma PgetPputPGPandPS_GP : [PGP &&& PS ===> GP].
 Proof.
   move => S V hs hv l PGP PS s v H1;
   case (PS s) => [s' [v' H2]];
@@ -213,7 +225,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputWPGandWSS_PGP : [WPG &&& WSS ===> PGP].
+Lemma PgetPputWPGandWSS_PGP : [WPG &&& WSS ===> PGP].
 Proof.
   move => S V hs hv l WPG WSS s s' v v' [H1 H2];
   case (WSS s' s v) => [v'' H3];
@@ -221,7 +233,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputUDandWSS_PGP : [UD &&& WSS ===> PGP].
+Lemma PgetPputUDandWSS_PGP : [UD &&& WSS ===> PGP].
 Proof.
   move => S V hs hv l UD WSS s s' v v' [H1 H2];
   case (WSS s' s v) => [v'' H3];
@@ -229,7 +241,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputUDandWSS_GPG : [UD &&& WSS ===> GPG].
+Lemma PgetPputUDandWSS_GPG : [UD &&& WSS ===> GPG].
 Proof.
   move => S V hs hv l UD WSS s s' v [H1 H2];
   case (WSS s s' v) => [v' H3];
@@ -242,7 +254,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputWSSandPS_SS : [WSS &&& PS ===> SS].
+Lemma PgetPputWSSandPS_SS : [WSS &&& PS ===> SS].
 Proof.
   move => S V hs hv l WSS PS s;
   case (PS s) => [s' [v H1]];
@@ -254,7 +266,7 @@ End GPFamily.
 
 Section PGFamily.
 
-Theorem PgetPputPG_VD : [PG ===> VD].
+Lemma PgetPputPG_VD : [PG ===> VD].
 Proof.
   move => S V hs hv l PG s s' s'' v v' [H1 H2];
   apply PG in H1;
@@ -264,17 +276,17 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem PgetPputVD_PI : [VD ===> PI].
+Lemma PgetPputVD_PI : [VD ===> PI].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPG_GPG : [PG ===> GPG].
+Lemma PgetPputPG_GPG : [PG ===> GPG].
 Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPG_WPG : [PG ===> WPG].
+Lemma PgetPputPG_WPG : [PG ===> WPG].
 Proof.
   move => S V hs hv l PG s s' v v' [H1 H2];
   apply PG in H1 as H3;
@@ -287,7 +299,7 @@ End PGFamily.
 
 Section PPFamily.
 
-Theorem PgetPputPT_WSS : [PT ===> WSS].
+Lemma PgetPputPT_WSS : [PT ===> WSS].
 Proof.
   move => S V hs hv l PT s s' v';
   exists (v');
@@ -296,14 +308,14 @@ Qed.
 
 End PPFamily.
 
-Theorem PgetPputPIandPT_VD : [PI &&& PT ===> VD].
+Lemma PgetPputPIandPT_VD : [PI &&& PT ===> VD].
 Proof.
   move => S V l hs hv PI PT s s' s'' v v' [H1 H2];
   apply (PI s'' s'' v v');
   firstorder.
 Qed.
 
-Theorem PgetPputSGPandGS_PG : [SGP &&& GS ===> PG].
+Lemma PgetPputSGPandGS_PG : [SGP &&& GS ===> PG].
 Proof.
   move => S V hs hv l SGP GS s s' v H;
   case (GS v) => [s'' H1];
@@ -313,7 +325,16 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputWSSandVD_PT : [WSS &&& VD ===> PT].
+Lemma PgetPputSGPandGS_PP : [SGP &&& GS ===> PP].
+Proof.
+  move => S V hs hv l HSGP HGS s s' s'' v v' [H1 H2].
+  case (HGS v') => [s''' H3].
+  apply (HSGP s' s''' v') in H3 as H4;
+  rewrite H2 in H4; inversion H4;
+  apply HSGP; firstorder.
+Qed.
+
+Lemma PgetPputWSSandVD_PT : [WSS &&& VD ===> PT].
 Proof.
   move => S V hs hv l WSS VD s s' v H;
   case (WSS s' s v) => [v' H1];
@@ -325,7 +346,7 @@ Proof.
   apply H2.
 Qed.
 
-Theorem PgetPputPGPandPP_WPG : [PGP &&& PP ===> WPG].
+Lemma PgetPputPGPandPP_WPG : [PGP &&& PP ===> WPG].
 Proof.
   move => S V hs hv l PGP PP s s' v v' [H1 H2];
   apply (PP s s' s' v v');
@@ -335,7 +356,7 @@ Proof.
   firstorder.
 Qed.
 
-Theorem PgetPputPGPandPG_PT : [PGP &&& PG ===> PT].
+Lemma PgetPputPGPandPG_PT : [PGP &&& PG ===> PT].
 Proof.
   move => S V hs hv l PGP PG s s' v H1;
   apply PG in H1 as H2;
@@ -404,6 +425,85 @@ Notation "[ L1 &&& .. &&& Ln ===>pg L ]" :=
   (at level 60,
    format "[ L1  &&&  ..  &&&  Ln  ===>pg L ]").
 
+Notation "[ L1 &&& .. &&& Ln ===>g_nep L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> NEP S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g_nep  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>g_nep2 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> NEP2 S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g_nep2  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>g_nep3 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     GetTotal S V l -> NEP3 S V l ->
+     L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>g_nep3  L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>p_neg L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     PutTotal S V l -> NEG S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>p_neg L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>neg L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>neg L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>nep L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEP S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>nep L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>nep2 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEP2 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>nep2 L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>nep3 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEP3 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>nep3 L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>negp L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> NEP S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>negp L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>negp2 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> NEP2 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>negp2 L ]").
+
+Notation "[ L1 &&& .. &&& Ln ===>negp3 L ]" :=
+  (forall (S V : Type) `{inhabited S} `{inhabited V} (l : Lens S V),
+     NEG S V l -> NEP3 S V l -> L1 S V l -> .. (Ln S V l -> L S V l) .. )
+  (at level 60,
+   format "[ L1  &&&  ..  &&&  Ln  ===>negp3 L ]").
+
+Lemma g : [PG &&& NEP3 ===> GS].
+Proof.
+  move => S V hs hv l HPG HNEP3 v.
+  unfold PG in HPG;unfold NEP3 in HNEP3.
+  move: (HNEP3 v) => [s Hs].
+  case E: (p_put l (s,v)) Hs => [s'|] Hs.
+  exists s'.
+  exact: (HPG s s' v E).
+  firstorder.
+Qed.
 
 Lemma TgetPputGP_SS : [GP ===>g SS].
 Proof.
@@ -433,6 +533,16 @@ Proof.
   exfalso; apply (gt s); firstorder.
 Qed.
 
+Lemma PgetTputUDandWSS_GP : [UD &&& WSS ===>p GP].
+Proof.
+  move => S V hs hv l pt HUD HWSS s v H1.
+  case (p_put l (s,v)) eqn:H2.
+  have H3 := (HUD s s0 v v) (conj H2 H1).
+  have H4 := (HWSS s s0 v). destruct H4.
+  apply H in H3.
+  have H5 := (HUD s s x v) (conj H3 H1).
+  rewrite H5 in H2. firstorder. firstorder.
+Qed.
 
 Lemma TgetPputWPGandPI_PG : [WPG &&& PI ===>g PG].
 Proof.
@@ -456,12 +566,14 @@ Proof.
   exfalso; apply (gt s'); firstorder.
 Qed.
 
-Lemma TgetPputSGPandPG_PP : [SGP &&& PG ===>g PP].
+Lemma PgetTputGPandPP_UD : [GP &&& PP ===>p UD].
 Proof.
-  move => S V hs hv l gt SGP PG s s' s'' v v' [H1 H2].
-  apply SGP.
-  apply PG with (s := s').
-  exact H2.
+  move => S V hs hv l pt HGP HPP s s' v v' [H1 H2].
+  apply HGP in H2.
+  case (p_put l (s',v')) eqn:H3.
+  have H4 := (HPP s s' s0 v v') (conj H1 H3).
+  rewrite H2 in H4. firstorder.
+  firstorder.
 Qed.
 
 Lemma PgetTputGIandGPG_GP : [GI &&& GPG ===>p GP].
@@ -470,7 +582,7 @@ Proof.
   case (p_put l (s,v)) eqn:H1.
   have H2 := (GPG s s0 v) (conj H H1);
   have H3 := (GI s s0 v) (conj H H2);
-  firstorder.
+  firstorder; rewrite H3; reflexivity.
   exfalso;apply (pt s v); firstorder.
 Qed.
 
@@ -485,6 +597,37 @@ Proof.
   apply: (HPG s_init s' v).
   exact: H_put.
   done.
+Qed.
+
+Lemma PgetTputPGandGI_SGP : [PG &&& GI ===>p SGP].
+Proof.
+  move => S V hs hv l pt HPG HGI s s' v H;
+  case (p_put l (s,v)) eqn : H1.
+  have H2 := (HGI s0 s' v). unfold PG in HPG.
+  apply (HPG s s0 v) in H1. firstorder. rewrite H0. reflexivity.
+  exfalso; apply (pt s v); firstorder.
+Qed.
+
+Lemma PgetTputUDandVD_WPG : [UD &&& VD ===>p WPG].
+Proof.
+  move => S V hs hv l PT HUD HVD s s' v v' [H1 H2].
+  case (p_put l (s',v')) eqn:Hp.
+  move : (HUD s' s0 v' v') => H3;
+  have H4 := H3 (conj Hp H2).
+  move : (HVD s s0 s' v v') => H5;
+  have H6 := H5 (conj H1 H4).
+  rewrite <- H6; apply H1.
+  firstorder.
+Qed.
+
+Lemma TgetPputUDandPP_PT : [UD &&& PP ===>g PT].
+Proof.
+  move => S V hs hv l TG HUD HPP s s' v H.
+  case (p_get l s) eqn:Hp.
+  move : (HUD s s' v v0) => H1;
+  have H2 := H1 (conj H Hp);
+  apply (HPP s' s s' v0 v);
+  firstorder. firstorder.
 Qed.
 
 Lemma PputPP_PT : [PP ===>p PT].
@@ -517,12 +660,7 @@ Ltac ce_lens S V p_get p_put :=
   unfold_laws=> /=;
   intro_all.
 
-Tactic Notation "len" 
-  constr(S) constr(V) uconstr(get) uconstr(put):=
-  move => H;
-  let l := constr:(@mkLens S V get put) in
-  pose l as l1.
-
+Check (mkLens).
 Inductive Dom3 : Type :=
 | a | b | c.
 
@@ -543,8 +681,8 @@ Proof.
     |(false,_) => Some false
     |(true,_) => Some true
     end)
-  ).
-  have HSGP : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l -> SGP S V l := H S V _ _ l.
+  );
+  have HSGP : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l -> SGP S V l := H S V _ _ l;
   have GT : GetTotal S V l.
   by move=> [].
   have PT : PutTotal S V l.
@@ -1418,7 +1556,7 @@ Qed.
 
 Lemma TgetTputPPnotWPG : ~[PP ===>pg WPG].
 Proof.
-  move => H. set (S := bool). set (V := bool).
+  move => H. set (Sv := bool). set (Vv := bool).
   set (l :=
   @mkLens bool bool
   (fun b => Some false)
@@ -1428,12 +1566,221 @@ Proof.
    |(_,true) => Some false
   end)
   ).
-  have HWPG : GetTotal S V l -> PutTotal S V l -> PP S V l -> WPG S V l := H S V _ _ l.
-  have GT : GetTotal S V l. by move => [].
-  have Pt : PutTotal S V l. by move => [] [].
-  have HPP : PP S V l. by move => [] [] [];firstorder.
-  have HnotWPG : ~WPG S V l.
+  have HWPG : GetTotal Sv Vv l -> PutTotal Sv Vv l -> PP Sv Vv l -> WPG Sv Vv l := H Sv Vv _ _ l.
+  have GT : GetTotal Sv Vv l. by move => [].
+  have Pt : PutTotal Sv Vv l. by move => [] [].
+  have HPP : PP Sv Vv l. by move => [] [] [];firstorder.
+  have HnotWPG : ~WPG Sv Vv l.
   by move => HW;move: (HW false false true false (conj erefl erefl)).
   firstorder.
 Qed.
+
+Lemma TgetTputGIandGSandVDandPSnotWSS : ~[GI &&& GS &&& VD &&& PS ===>pg WSS].
+Proof.
+ move => H. set (Sv := nat). set (Vv := nat).
+  set (l :=
+  @mkLens nat nat
+  (fun n => Some n)
+  (fun '(s,v) =>
+   match v with
+   | 0 =>
+       match s with
+       | 0 => Some 1
+       | S _ => Some 0
+       end
+   | S n => Some (S (S n))
+   end)
+   ).
+  have HWSS : GetTotal Sv Vv l -> PutTotal Sv Vv l -> GI Sv Vv l -> GS Sv Vv l -> VD Sv Vv l -> PS Sv Vv l -> WSS Sv Vv l := H Sv Vv _ _ l.
+  have GT : GetTotal Sv Vv l. by move => [].
+  have PT : PutTotal Sv Vv l. move => [] [].
+  discriminate. discriminate. by move => [].
+  destruct n. by move => []. by move => [].
+  have HGI : GI Sv Vv l.
+  move => [] [] [];firstorder. simpl in H0;simpl in H1;rewrite <- H0 in H1; inversion H1.
+  rewrite <- H0 in H1; inversion H1.
+  simpl in H0;simpl in H1; rewrite <- H0 in H1; inversion H1.
+  rewrite <- H0 in H1; inversion H1; reflexivity.
+  rewrite <- H0 in H1; inversion H1; reflexivity.
+  rewrite <- H0 in H1; inversion H1; reflexivity.
+
+  have HPS : PS Sv Vv l. unfold PS. move => s. case s. exists (S 0);exists(0); reflexivity.
+  move => n. case n. exists (0);exists(0);reflexivity.
+  move => n0. exists(S n0); exists (S n0);reflexivity.
+
+  have HVD : VD Sv Vv l. move => [] [] [] [] []. firstorder. firstorder.
+  by move => v' []. by move => n v' []. move =>[]. firstorder.
+  by move => n []. by move => n v' []. move => v v' [H1 H2].
+  case v,v'. discriminate. discriminate. discriminate. firstorder.
+  move => n v v' [H1 H2]. case v,v'. discriminate. discriminate. discriminate. firstorder.
+  by move => v' []. by move => n v' [].
+  move => v v' [H1 H2]. case v,v'. discriminate. discriminate. discriminate. firstorder.
+  move => n v v' [H1 H2]. case v,v'. discriminate. discriminate. discriminate. firstorder.
+  move => v v' [H1 H2]. case v,v'. discriminate. discriminate. discriminate. firstorder.
+  move => n v v' [H1 H2]. case n,v,v';firstorder. discriminate. discriminate.
+  move => s'' v v' [H1 H2]. case s'',v,v';firstorder. discriminate. discriminate.
+  move => n s'' v v' [H1 H2]. case n,s'',v,v';firstorder. discriminate. discriminate. discriminate. discriminate.
+  move => v'. case v'. firstorder. by move => n [].
+  by move => n v' []. move => v v'. case v,v';firstorder. discriminate.
+  move => n v v' [H1 H2]. case n,v,v';firstorder. discriminate. discriminate.
+  move => v v' [H1 H2]. case v,v';firstorder. discriminate. discriminate.
+  move => n v v' [H1 H2]. case n,v,v';firstorder. discriminate. discriminate. discriminate. discriminate.
+  move => s'' v v' [H1 H2]. case s'',v,v';firstorder. discriminate. discriminate. discriminate. discriminate.
+  move => n s'' v v' [H1 H2]. case n,s'',v,v';firstorder.
+  discriminate. discriminate. discriminate. discriminate. discriminate. discriminate. discriminate. discriminate.
+  move => v v' [H1 H2]. case v,v';firstorder. discriminate.
+  move => n v v' [H1 H2]. case n,v,v';firstorder. discriminate. discriminate.
+  move => s'' v v' [H1 H2]. case s'',v,v';firstorder. discriminate. discriminate. discriminate. discriminate.
+  move => n s'' v v' [H1 H2]. case n,s'',v,v';firstorder.
+  discriminate. discriminate. discriminate.
+  discriminate. discriminate. discriminate. discriminate. discriminate.
+  move => s'' v v' []. case s'',v,v';firstorder. discriminate. discriminate.
+  move => n s'' v v' [H1 H2]. case n,s'',v,v';firstorder.
+  discriminate. discriminate. discriminate. discriminate.
+  discriminate. discriminate. discriminate. discriminate.
+  move => s' s'' v v' [H1 H2]. case s',s'',v,v';firstorder.
+  discriminate. discriminate. discriminate. discriminate. discriminate. discriminate.
+  move => n s' s'' v v' [H1 H2]. case n,s',s'',v,v';firstorder.
+  discriminate. discriminate. discriminate. discriminate. discriminate. discriminate.
+  discriminate. discriminate. discriminate. discriminate. discriminate. discriminate. 
+
+  have HGS : GS Sv Vv l. move => v. case v. exists (0); firstorder.
+  move => n. exists(S n);firstorder.
+
+  have HnotWSS : ~ WSS Sv Vv l. unfold WSS.
+  move => HW. move : (HW (S 0) 0 0) => [v HJ]. firstorder.
+  destruct v. discriminate. discriminate. by apply: HnotWSS;
+   apply: (HWSS inhabited_nat inhabited_nat).
+Qed.
+
+
+
+Lemma TgetTputUDandPGnotWSS : ~[UD &&& PG ===>pg WSS].
+
+
+Lemma TgetTputGIandUDandGSnotWSS : ~[GI &&& UD &&& GS ===>pg WSS].
+Lemma TgetTputGIandVDandGSnotWSS : ~[GI &&& VD &&& GS ===>pg WSS].
+Lemma TgetTputGIandGSandVDandPSnotWSS : ~[GI &&& GS &&& VD &&& PS ===>pg WSS].
+(*yuugenn dato mitukaranai. wakaranai*)
+
+Lemma PgetTputGPandUDandWPGandGIandPIandGSnotWSS : ~[GP &&& UD &&& WPG &&& GI &&& PI &&& GS ===>p WSS].
+Lemma PgetTputSGPandVDnotWSS : ~[SGP &&& VD ===>p WSS].
+Lemma TgetPputPSandPGandGSandPPnotWSS : ~[PS &&& PG &&& GS &&& PP ===>g WSS].
+Lemma TgetTputUDandPGnotWSS : ~[UD &&& PG ===> WSS].
+Lemma PgetPputUDandPGandGSandPSandPPnotWSS : ~[UD &&& PG &&& GS &&& PS &&& PP ===>g WSS].
+(*PS mo hairu kanousei ga aru*)
+
+Lemma TgetTputGPandGIandPIandGSnotPT : ~[GP &&& GI &&& PI &&& GS ===>pg PT].
+Lemma PgetTputSGPandPSandVDnotPT : ~[SGP &&& PS &&& VD ===>p PT].
+Lemma PgetTputSGPandSSandPInotPT : ~[SGP &&& SS &&& PI ===>p PT].
+Lemma PgetTputUDandPSandPGnotPT : ~[UD &&& PS &&& PG ===>p PT].
+Lemma TgetPputGPandUDandWPGandGIandPIandGSnotPT : ~[GP &&& UD &&& WPG &&& GI &&& PI &&& GS ===>g PT].
+
+Lemma TgetTputSGPandPTnotPP : ~[SGP &&& PT ===>pg PP].
+
+
+Lemma TgetTputGPandPGandUDandPTnotPP : ~ [GP &&& PG &&& UD &&& PT ===>pg PP].
+(*kore ha domeinn ga mugenn.ronnbunn wo sannkou ni*)
+(*PT mo iranai ga menndou nanode ireteru*)
+
+
+Lemma PgetTputSGPandSSandVDandPTnotPP : ~ [SGP &&& SS &&& VD &&& PT ===>p PP].
+
+
+Lemma PgetPputSGPandSSandVDandPTnotPP : ~ [SGP &&& SS &&& VD &&& PT ===> PP].
+Lemma PgetPputGPandPGandGSandUDandSSandPTnotPP : ~ [GP &&& PG &&& GS &&& UD &&& SS &&& PT ===>pg PP].
+
+Lemma TgetTputSGPandPPnotPI : ~[SGP &&& PP ===>pg PI].
+Lemma TgetTputGPandUDandGIandGSandPPnotPI : ~[GP &&& UD &&& GI &&& GS &&& PP ===>pg PI].
+
+
+Lemma TgetTputGPandGIandGSandPInotVD : ~[GP &&& GI &&& GS &&& PI ===>pg VD].
+
+Lemma TgetTputSGPandPPnotGS : ~ [SGP &&& PP ===>pg GS].
+Lemma TgetTputSSandGIandVDandPPnotGS : ~[SS &&& GI &&& VD &&& PP ===>pg GS].
+(*yuugenn no hannrei nai*)
+
+Lemma TgetTputGPandGIandPInotGS : ~[GP &&& GI &&& PI ===>pg GS].
+
+Lemma PgetTputSGPandSSandVDandPPnotGS : ~ [ SGP &&& SS &&& VD &&& PP ===>p GS].
+Lemma TgetPputSGPandPGandPPandPTnotGS : ~ [ SGP &&& PG &&& PP &&& PT ===>g GS].
+
+Lemma TgetTputSGPandPPnotPG : ~[SGP &&& PP ===>pg PG].
+Lemma PgetTputSGPandSSandVDandPPnotPG : ~ [SGP &&& SS &&& VD &&& PP ===>p PG].
+
+Lemma TgetTputGPandGIandPIandGSnotWPG : ~[GP &&& GI &&& PI &&& GS ===>pg WPG].
+Lemma TgetTputGPandGIandGSandPTnotWPG : ~[GP &&& GI &&& GS &&& PT ===>pg WPG].
+Lemma TgetTputGPGandSSandVDandGSandPPnotWPG : ~[GPG &&& SS &&& VD &&& GS &&& PP ===>pg WPG].
+Lemma TgetTputGIandSSandVDandGSandPPnotWPG : ~[GI &&& SS &&& VD &&& GS &&& PP ===>pg WPG].
+
+Lemma PgetTputGPandUDandGIandSSandGSandPInotWPG : ~[GP &&& UD &&& GI &&& SS &&& GS &&& PI ===>p WPG].
+Lemma PgetTputGPandUDandGIandSSandGSandPTnotWPG : ~[GP &&& UD &&& GI &&& SS &&& GS &&& PT ===>p WPG].
+Lemma PgetTputGPGandSSandVDandGSandPPnotWPG : ~[GPG &&& SS &&& VD &&& GS &&& PP ===>p WPG].
+Lemma PgetTputGIandSSandVDandGSandPPnotWPG : ~[GI &&& SS &&& VD &&& GS &&& PP ===>p WPG].
+
+
+Lemma TgetTputPGPandPGandPPnotPS : ~ [PGP &&& PG &&& PP ===>pg PS].
+Lemma TgetTputGIandPGPandWPGandGSandPPnotPS : ~[GI &&& PGP &&& WPG &&& GS &&& PP ===>pg PS].
+Lemma TgetTputGIandVDandGSnotPS : ~[GI &&& VD &&& GS ===>pg PS].
+
+Lemma PgetTputSGPandPGandPPnotPS : ~[SGP &&& PG &&& PP ===>p PS].
+
+Lemma TgetPputUDandGIandPGPandPGandGSandPPandPTnotPS : ~[UD &&& GI &&& PGP &&& PG &&& GS &&& PP &&& PT ===>g PS].
+
+
+Lemma TgetTputPSandPGnotSS : ~[PS &&& PG ===>pg SS].
+Lemma PgetTputSGPandPSandVDnotSS : ~[SGP &&& PS &&& VD ===>p SS].
+Lemma TgetPputPSandPGandGSandPPnotSS : ~[PS &&& PG &&& GS &&& PP ===>g SS].
+
+Lemma TgetTput : ~[GP &&& UD &&& PP ===>pg GI].
+
+Lemma TgetTputGPandUDandGIandPPnotSGP : ~ [GP &&& UD &&& GI &&& GS &&& PP ===>pg SGP].
+Lemma TgetTputGPandUDandPGandPPnotSGP : ~ [GP &&& UD &&& PG &&& PP ===>pg SGP].
+Lemma PgetTputGPandUDandSSandGIandPPnotSGP : ~[GP &&& UD &&& SS &&& GI &&& PP ===>p SGP].
+Lemma PgetTputGPandUDandSSandPGandPPnotSGP : ~[GP &&& UD &&& SS &&& PG &&& PP ===>p SGP].
+Lemma TgetPputGPandUDandGIandPGandGSandPPandPTnotSGP : ~[GP &&& UD &&& GI &&& PG &&& GS &&& PP &&& PT ===>g SGP].
+
+Lemma TgetTputSSandGPGandVDandGSandPPnotPGP : ~[SS &&& GPG &&& VD &&& GS &&& PP ===>pg PGP].
+Lemma TgetTputSSandGIandVDandGSandPPnotPGP : ~[SS &&& GI &&& VD &&& GS &&& PP ===>pg PGP].
+Lemma TgetTputUDandPGnotPGP : ~[UD &&& PG ===>pg PGP].
+Lemma TgetTputUDandGIandGSnotPGP : ~[UD &&& GI && GS ===>pg PGP].
+
+Lemma PgetTputUDandPSandPGnotPGP : ~[UD &&& PS &&& PG ===>pg PGP].
+Lemma PgetTputUDandPSandGIandWPGandVDandGSnotPGP : ~[UD &&& PS &&& GI &&& WPG &&& VD &&& GS ===>p PGP].
+
+Lemma TgetPputGIandPSandPGandPPnotPGP : ~[GI &&& PS &&& PG &&& PP ===>g PGP].
+Lemma TgetPputGIandUDandPGnotPGP : ~[GI &&& UD &&& PG ===>g PGP].
+
+Lemma TgetTputGPandPGandPTnotUD : ~[GP &&& PG &&& PT ===>pg UD].
+Lemma TgetTputGPandGIandWPGandGsandPTnotUD : ~[GP &&& GI &&& WPG &&& GS &&& PT ===>pg UD].
+Lemma TgetTputPGPandPGandPPnotUD : ~[PGP &&& PG &&& PP ===>pg UD].
+Lemma TgetTputGIandSSandVDandGSandPPnotUD : ~[GI &&& SS &&& VD &&& GS &&& PP ===>pg UD].
+Lemma TgetTputGIandWPGandPGPandGSandPPnotUD : ~[GI &&& WPG &&& PGP &&& GS &&& PP ===>pg UD].
+
+Lemma TgetPputGIandGPandPGandGSandPPandPTnotUD : ~[GI &&& GP &&& PG &&& GS &&& PP &&& PT ===>g UD].
+
+Lemma PgetTputGIandGPandSSandWPGandVDandGSandPTnotUD : ~[GI &&& GP &&& SS &&& WPG &&& VD &&& GS &&& PT ===>p UD].
+Lemma PgetTputGIandPGPandWPGandVDandGSandPPandPTnotUD : ~[GI &&& PGP &&& WPG &&& VD &&& GS &&& PP &&& PT ===>p UD].
+
+Lemma PgetPputGIandGPandSSandPGandGSandPPandPTnotUD : ~[GI &&& GP &&& SS &&& PG &&& GS &&& PP &&& PT ===> UD].
+
+Lemma TgetTputUDandPGnotGP : ~[UD &&& PG ===>pg GP].
+Lemma TgetTputGIandUDandGSnotGP : ~[GI &&& UD &&& GS ===>pg GP].
+Lemma TgetTputPGPabdPGandPPnotGP : ~[PGP &&& PG &&& PP ===>pg GP].
+Lemma TgetTputSSandGPGandVDandGSandPPnotGP : ~[SS &&& GPG &&& VD &&& GS &&& PP ===>pg GP].
+Lemma TgetTputGIandSSandVDandGSandPPnotGP : ~[GI &&& SS &&& VD &&& GS &&& PP ===>pg GP].
+Lemma TgetTputGIandPGPandWPGandGSandPPnotGP : ~[GI &&& PGP &&& WPG &&& GS &&& PP ===>pg GP].
+
+Lemma PgetTputUDandPSandPGnotGP : ~[UD &&& PS &&& PG ===>p GP].
+Lemma PgetTputGIandUDandPSandWPGandVDandGSnotGP : ~[GI &&& UD &&& PS &&& WPG &&& VD &&& GS ===>p GP].
+Lemma PgetTputSSandGPGandVDandGSandPPnotGP : ~[SS &&& GPG &&& VD &&& GS &&& PP ===>p GP].
+Lemma PgetTputGIandSSandVDandGSandPPnotGP : ~[GI &&& SS &&& VD &&& GS &&& PP ===>p GP].
+Lemma PgetTputGIandPGPandWPGandVDandGSandPPnotGP : ~[GI &&& PGP &&& WPG &&& VD &&& GS &&& PP ===>p GP].
+
+Lemma TgetPputGIandUDandPGPandPGandGSandPPandPTnotGP : ~[GI &&& UD &&& PGP &&& PG &&& GS &&& PP &&& PT ===>g GP].
+Lemma TgetPputGIandSSandGPGandVDandGSandPPandPTnotGP : ~[GI &&& SS &&& GPG &&& VD &&& GS &&& PP &&& PT ===>g GP].
+
+Lemma PgetPputGIandUDandPGPandPGandGSandPPandPTnotGP : ~[GI &&& UD &&& PGP &&& PG &&& GS &&& PP &&& PT ===> GP].
+Lemma PgetPputGIandSSandGPGandVDandGSandPPandPTnotGP : ~[GI &&& SS &&& GPG &&& VD &&& GS &&& PP &&& PT ===> GP].
+
 
