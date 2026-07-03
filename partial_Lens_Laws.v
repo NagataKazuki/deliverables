@@ -681,8 +681,8 @@ Proof.
     |(false,_) => Some false
     |(true,_) => Some true
     end)
-  );
-  have HSGP : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l -> SGP S V l := H S V _ _ l;
+  ).
+  have HSGP : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l -> SGP S V l := H S V _ _ l.
   have GT : GetTotal S V l.
   by move=> [].
   have PT : PutTotal S V l.
@@ -698,6 +698,12 @@ Proof.
   firstorder.
 Qed.
 
+Ltac have_tg :=
+  have HTG : GetTotal S V l.
+
+Ltac have_tp :=
+  have HTP : PutTotal S V l.
+
 Lemma TgetTputGPandUDnotGI : ~[GP &&& UD ===>pg GI].
 Proof.
   move => H.
@@ -712,8 +718,7 @@ Proof.
     |(true,_) => Some true
     end)).
   have HGI : GetTotal S V l -> PutTotal S V l -> GP S V l -> UD S V l -> GI S V l := H S V _ _ l.
-  have GT : GetTotal S V l.
-  by move => [].
+  have_tg. by move => [].
   have PT : PutTotal S V l. 
   by move => [] [].
   have GP : GP S V l. by move => [] [].
@@ -722,6 +727,9 @@ Proof.
   by move => HW;move:( HW false true false (conj erefl erefl)).
   firstorder.
 Qed.
+
+Ltac have_gi :=
+  have TGI : GI S V l.
 
 Lemma TgetTputGIandPGPandWPGnotGPG : ~[GI &&& PGP &&& WPG ===>pg GPG].
 Proof.
@@ -736,7 +744,8 @@ Proof.
   have HGPG : GetTotal S V l -> PutTotal S V l -> GI S V l -> PGP S V l -> WPG S V l -> GPG S V l := H S V _ _ l.
   have GT : GetTotal S V l. by move => [].
   have PT : PutTotal S V l. by move => [] [].
-  have HGI : GI S V l. by move => [] [] []; firstorder.
+  have_gi.
+  by move => [] [] []; firstorder.
   have HPGP : PGP S V l. by move => [] [] [] [];firstorder.
   have HWPG : WPG S V l. by move => [] [] [] [];firstorder.
   have HnotGPG : ~ GPG S V l.
@@ -813,8 +822,7 @@ Proof.
   have GT : GetTotal S V l. by move => [].
   have PT : PutTotal S V l. by move => [] [].
   have HGI : GI S V l. by move => [] [] []; firstorder.
-  have HSS : SS S V l. rewrite /SS ;case => /=.
-  exists false; by []. exists true; by [].
+  have HSS : SS S V l. rewrite /SS ;case => /=. exists false; by []. exists true; by [].
   have HnotPGP : ~ PGP S V l.
   by move=> HW; move: (HW false true false true (conj erefl erefl)). 
   firstorder.
@@ -840,9 +848,7 @@ Proof.
   have GT : GetTotal S V l. by move => [].
   have PT : PutTotal S V l. by move => [] [].
   have HGI : GPG S V l. by move => [] [] []; firstorder.
-  have HSS : SS S V l. rewrite /SS; case => /=.
-  exists false;by [].
-  exists true;by [].
+  have HSS : SS S V l. rewrite /SS; case => /=. exists false;by [].  exists true;by [].
   have HnotPGP : ~ PGP S V l.
   by move => HW; move :(HW false false true false (conj erefl erefl)).
   firstorder.
@@ -867,9 +873,10 @@ Proof.
   have HGI : GI S V l. by move => [] [] [];firstorder.
   have HUD : UD S V l. by move => [] [] [] [];firstorder.
   have HnotWSS : ~ WSS S V l.
-  by move=> HW; move: (HW true false true) => [v Hv];
-  have := Hv erefl. firstorder.
+  move=> HW. move: (HW true false true) => [v Hv].
+  by have := Hv erefl. firstorder.
 Qed.
+
 
 Lemma TgetTputGPGandUDnotWSS : ~[GPG &&& UD ===>pg WSS].
 Proof.
