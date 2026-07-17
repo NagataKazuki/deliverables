@@ -1,4 +1,0 @@
-(executable
- (public_name bx_project)
- (name main)
- (libraries bx_project))

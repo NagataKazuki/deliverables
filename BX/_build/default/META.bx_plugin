@@ -1,6 +1,0 @@
-description = ""
-requires = "rocq-runtime.plugins.ltac"
-archive(byte) = "bx_plugin.cma"
-archive(native) = "bx_plugin.cmxa"
-plugin(byte) = "bx_plugin.cma"
-plugin(native) = "bx_plugin.cmxs"

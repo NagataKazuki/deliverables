@@ -125,9 +125,16 @@ partial class Program
     if(S.Size == 3)
     {
         SType = "Dom3";
-        t[0] = "a";
-        t[1] = "b";
-        t[2] = "c";
+        t[0] = "aa";
+        t[1] = "bb";
+        t[2] = "cc";
+    }
+    if(S.Size == 4)
+    {
+        t[0] = "AA";
+        t[1] = "BB";
+        t[2] = "CC";
+        t[3] = "DD";
     }
 
     if(V.Size == 2)
@@ -140,12 +147,21 @@ partial class Program
     if(V.Size == 3)
     {
         VType = "Dom3";
-        w[0] = "a";
-        w[1] = "b";
-        w[2] = "c";
+        w[0] = "aa";
+        w[1] = "bb";
+        w[2] = "cc";
     }
+    
+    if(V.Size == 4)
+    {
+        w[0] = "AA";
+        w[1] = "BB";
+        w[2] = "CC";
+        w[3] = "DD";
+    }
+
     String Rocqlens = $"set (S := {SType} ); set (V := {VType} ); set (l := @mkLens {SType} {VType} ";
-    Rocqlens += " (fun b => match b with";
+    Rocqlens += " (fun st => match st with";
     for (int s = 0; s < S.Size; s++)
     {
         bool found = false;

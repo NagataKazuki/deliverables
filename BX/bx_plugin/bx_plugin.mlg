@@ -58,6 +58,8 @@ let keyword_to_string (c : Constr.t) : string option =
       | "nep3" -> Some "NEP3"
       | "tg" -> Some "tG"
       | "tp" -> Some "tP"
+      | "ppg" -> Some "pG"
+      | "ppp" -> Some "pP" 
       | _ -> None
       end
   | None -> None

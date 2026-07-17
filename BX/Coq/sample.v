@@ -7,6 +7,8 @@ Require Export ssreflect ssrfun ssrbool.
 From Stdlib.Lists Require Export List.
 Export ListNotations.
 
+Require Export PeanoNat.
+
 Record Lens (S V : Type):= mkLens{
   p_get : S -> option V;
   p_put : S * V -> option S;
@@ -25,10 +27,10 @@ Instance inhabited_nat : inhabited nat :=
 
 
 Inductive Dom3 : Type :=
-| a | b | c.
+| aa | bb | cc.
 
 Inductive Dom4 : Type :=
-| A | B | C | D.
+| AA | BB | CC | DD.
 
 Inductive toolLens : Type :=
 | sgp | gp | pg | pp | wpg | pgp
