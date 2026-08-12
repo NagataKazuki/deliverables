@@ -1,5 +1,41 @@
-4
-A B C D
-A -> B
-B -> C
-A -> D
+16
+SGP GP SS PS UD WPG GPG PGP WSS GI PG VD PI GS PP PT
+SGP -> GP
+GP -> SS
+SS -> PS
+SS -> WSS
+SGP -> UD
+UD -> WPG
+UD -> PS
+SGP -> GI
+GP -> GPG
+GP -> PGP
+PGP -> WSS
+GI + GPG -> GP
+WPG + SS -> GP
+PGP + PS -> GP
+WSS + PS -> SS
+WPG + WSS -> PGP
+
+PG -> GPG
+PG -> WPG
+PG -> VD
+VD -> PI
+PG -> GS
+WPG + PI -> PG
+
+PP -> PT
+PT -> WSS
+
+PI + PT -> VD
+SGP + GS -> PG
+SGP + GS -> PP
+WSS + VD -> PT
+PGP + PP -> WPG
+PGP + PG -> PT
+PGP + VD -> PG
+GP + PP -> UD
+PG + GI -> SGP
+SGP + PI -> PP
+
+end

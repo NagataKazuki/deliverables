@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
+using Microsoft.Z3;
 
 namespace ImplicationSolver
 {
@@ -22,15 +24,59 @@ namespace ImplicationSolver
         private readonly List<Implication> implications;
         private readonly long allTrueMask;
 
+        private readonly int[] initialRuleCounts;
+        private readonly List<int>[] dependents;
+        private readonly int[] ruleRightIndices;
+        private readonly long baseClosure;
+
         public HornImplicationSolver(string[] ruleNames, List<Implication> implications)
         {
             this.ruleCount = ruleNames.Length;
             this.ruleNames = ruleNames;
             this.implications = implications;
             this.allTrueMask = ruleCount == 64 ? -1L : (1L << ruleCount) - 1L;
+
+            int impCount = implications.Count;
+            initialRuleCounts = new int[impCount];
+            dependents = new List<int>[ruleCount];
+            for (int i = 0; i < ruleCount; i++)
+            {
+                dependents[i] = new List<int>();
+            }
+            ruleRightIndices = new int[impCount];
+
+            long initialBaseClosure = 0;
+
+            for (int r = 0; r < impCount; r++)
+            {
+                var imp = implications[r];
+
+                int count = BitOperations.PopCount((ulong)imp.LeftMask);
+                initialRuleCounts[r] = count;
+
+                if (count == 0)
+                {
+                    initialBaseClosure |= imp.RightBit;
+                }
+
+                for (int i = 0; i < ruleCount; i++)
+                {
+                    long bit = 1L << i;
+                    if ((imp.LeftMask & bit) != 0)
+                    {
+                        dependents[i].Add(r);
+                    }
+                    if (imp.RightBit == bit)
+                    {
+                        ruleRightIndices[r] = i;
+                    }
+                }
+            }
+
+            this.baseClosure = SlowComputeClosure(initialBaseClosure);
         }
 
-        public long ComputeClosure(long state)
+        private long SlowComputeClosure(long state)
         {
             long closure = state;
             while (true)
@@ -48,71 +94,204 @@ namespace ImplicationSolver
             return closure;
         }
 
+        public long ComputeClosure(long state)
+        {
+            long closure = state | baseClosure;
+            long queueMask = closure;
+            if (queueMask == 0) return 0;
+
+            Span<int> counts = stackalloc int[initialRuleCounts.Length];
+            initialRuleCounts.AsSpan().CopyTo(counts);
+
+            while (queueMask != 0)
+            {
+                long isolatedBit = queueMask & -queueMask;
+                int varIndex = BitOperations.TrailingZeroCount((ulong)isolatedBit);
+                queueMask &= ~isolatedBit;
+
+                foreach (int ruleIdx in dependents[varIndex])
+                {
+                    counts[ruleIdx]--;
+                    if (counts[ruleIdx] == 0)
+                    {
+                        long rightBit = 1L << ruleRightIndices[ruleIdx];
+                        if ((closure & rightBit) == 0)
+                        {
+                            closure |= rightBit;
+                            queueMask |= rightBit;
+                        }
+                    }
+                }
+            }
+
+            return closure;
+        }
+
         public List<RightHandSideReport> GenerateReportsByRightHandSide()
         {
             var reports = new List<RightHandSideReport>();
+            var allMainPremises = new List<HashSet<string>>();
+            var allOmittedPremises = new List<HashSet<string>>();
 
-            var closedStates = new List<long>();
-            for (long state = 1; state < allTrueMask; state++)
+            using var ctx = new Context();
+            BoolExpr[] z3Vars = new BoolExpr[ruleCount];
+            for (int i = 0; i < ruleCount; i++)
             {
-                if (ComputeClosure(state) == state)
+                z3Vars[i] = ctx.MkBoolConst(ruleNames[i]);
+            }
+
+            var globalRules = new List<BoolExpr>();
+            foreach (var imp in implications)
+            {
+                var lefts = new List<BoolExpr>();
+                for (int v = 0; v < ruleCount; v++)
                 {
-                    closedStates.Add(state);
+                    if ((imp.LeftMask & (1L << v)) != 0) lefts.Add(z3Vars[v]);
+                }
+
+                int rightIndex = BitOperations.TrailingZeroCount((ulong)imp.RightBit);
+
+                if (lefts.Count == 0)
+                {
+                    globalRules.Add(z3Vars[rightIndex]);
+                }
+                else
+                {
+                    var andExpr = ctx.MkAnd(lefts.ToArray());
+                    globalRules.Add(ctx.MkImplies(andExpr, z3Vars[rightIndex]));
                 }
             }
 
             for (int i = 0; i < ruleCount; i++)
             {
-                long targetBit = 1L << i;
-                var validClosed = closedStates.Where(s => (s & targetBit) == 0).ToList();
-
                 var maximalClosed = new List<long>();
+                var solver = ctx.MkSolver();
 
-                foreach (var state in validClosed)
+                solver.Add(globalRules.ToArray());
+                solver.Add(ctx.MkNot(z3Vars[i]));
+
+                while (solver.Check() == Status.SATISFIABLE)
                 {
-                    bool isMaximal = true;
-                    foreach (var other in validClosed)
+                    var model = solver.Model;
+                    long currentMask = 0;
+                    for (int v = 0; v < ruleCount; v++)
                     {
-                        if (state != other && (state & other) == state)
-                        {
-                            isMaximal = false;
-                            break;
-                        }
+                        if (model.Evaluate(z3Vars[v]).IsTrue) currentMask |= (1L << v);
                     }
 
-                    if (isMaximal)
+                    solver.Push();
+
+                    for (int v = 0; v < ruleCount; v++)
                     {
-                        maximalClosed.Add(state);
+                        if ((currentMask & (1L << v)) != 0) solver.Add(z3Vars[v]);
+                    }
+
+                    for (int v = 0; v < ruleCount; v++)
+                    {
+                        if ((currentMask & (1L << v)) == 0)
+                        {
+                            solver.Push();
+                            solver.Add(z3Vars[v]);
+                            if (solver.Check() == Status.SATISFIABLE)
+                            {
+                                var newModel = solver.Model;
+                                for (int v2 = 0; v2 < ruleCount; v2++)
+                                {
+                                    if (newModel.Evaluate(z3Vars[v2]).IsTrue) currentMask |= (1L << v2);
+                                }
+                                solver.Pop();
+                                for (int v2 = 0; v2 < ruleCount; v2++)
+                                {
+                                    if ((currentMask & (1L << v2)) != 0) solver.Add(z3Vars[v2]);
+                                }
+                            }
+                            else
+                            {
+                                solver.Pop();
+                            }
+                        }
+                    }
+                    solver.Pop();
+
+                    maximalClosed.Add(currentMask);
+
+                    var falses = new List<BoolExpr>();
+                    for (int v = 0; v < ruleCount; v++)
+                    {
+                        if ((currentMask & (1L << v)) == 0) falses.Add(z3Vars[v]);
+                    }
+
+                    if (falses.Count > 0)
+                    {
+                        solver.Add(ctx.MkOr(falses.ToArray()));
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
 
                 var mainPremises = new HashSet<string>();
-                foreach (var m in maximalClosed)
+                foreach (var maxState in maximalClosed)
                 {
-                    long gen = ReduceToMinimalGenerator(m);
+                    long gen = ReduceToMinimalGenerator(maxState);
                     mainPremises.Add(MaskToString(gen));
                 }
 
-                var omittedPremises = new HashSet<string>();
-                for (long state = 1; state < allTrueMask; state++)
+                allMainPremises.Add(mainPremises);
+                allOmittedPremises.Add(new HashSet<string>());
+            }
+            long[] impliedByRight = new long[ruleCount];
+            for (int i = 0; i < ruleCount; i++)
+            {
+                impliedByRight[i] = ComputeClosure(1L << i);
+            }
+
+            for (int i = 0; i < ruleCount; i++)
+            {
+                var currentMain = allMainPremises[i];
+                var currentOmitted = allOmittedPremises[i];
+                var toRemove = new List<string>();
+
+                foreach (var premise in currentMain)
                 {
-                    if ((state & targetBit) != 0) continue;
-                    if ((ComputeClosure(state) & targetBit) == 0)
+                    for (int j = 0; j < ruleCount; j++)
                     {
-                        string str = MaskToString(state);
-                        if (!mainPremises.Contains(str))
+                        if (i == j) continue;
+
+                        bool implies = (impliedByRight[i] & (1L << j)) != 0;
+                        if (implies)
                         {
-                            omittedPremises.Add(str);
+                            if (allMainPremises[j].Contains(premise))
+                            {
+                                bool impliedBack = (impliedByRight[j] & (1L << i)) != 0;
+                                if (impliedBack && i < j)
+                                {
+                                    continue;
+                                }
+
+                                toRemove.Add(premise);
+                                break;
+                            }
                         }
                     }
                 }
 
+                foreach (var premise in toRemove)
+                {
+                    currentMain.Remove(premise);
+                    currentOmitted.Add(premise);
+                }
+            }
+
+            for (int i = 0; i < ruleCount; i++)
+            {
                 reports.Add(new RightHandSideReport
                 {
                     RightName = ruleNames[i],
                     RightIndex = i,
-                    MainLeftPremises = mainPremises.OrderBy(s => s.Count(c => c == '+')).ThenBy(s => s).ToList(),
-                    OmittedLeftPremises = omittedPremises.OrderBy(s => s.Count(c => c == '+')).ThenBy(s => s).ToList()
+                    MainLeftPremises = allMainPremises[i].OrderBy(s => s.Count(c => c == '+')).ThenBy(s => s).ToList(),
+                    OmittedLeftPremises = allOmittedPremises[i].OrderBy(s => s.Count(c => c == '+')).ThenBy(s => s).ToList()
                 });
             }
 
@@ -197,14 +376,6 @@ namespace ImplicationSolver
 
                 string[] ruleNames = line2.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-                if (ruleNames.Length != expectedCount)
-                {
-                    Console.WriteLine($"\n 入力エラー");
-                    Console.WriteLine($"  - 1行目の入力: {expectedCount}");
-                    Console.WriteLine($"  - 2行目の入力: {ruleNames.Length} ({string.Join(", ", ruleNames)})");
-                    return;
-                }
-
                 var nameToBit = new Dictionary<string, long>();
                 for (int i = 0; i < expectedCount; i++)
                 {
@@ -216,7 +387,7 @@ namespace ImplicationSolver
                 while (true)
                 {
                     string? line = ReadNextValidLine();
-                    if (line == null || line.StartsWith(">>>>>")) break;
+                    if (line == null || line.Equals("end", StringComparison.OrdinalIgnoreCase)) break;
 
                     string[] parts = line.Split(new[] { "->" }, StringSplitOptions.None);
                     if (parts.Length != 2) continue;
@@ -229,31 +400,17 @@ namespace ImplicationSolver
                     foreach (var token in leftTokens)
                     {
                         if (token == "+") continue;
-                        if (nameToBit.TryGetValue(token, out long bit))
-                        {
-                            leftMask |= bit;
-                        }
-                        else
-                        {
-                            throw new ArgumentException($"左辺に未定義の規則 '{token}' ");
-                        }
+                        leftMask |= nameToBit[token];
                     }
 
-                    if (nameToBit.TryGetValue(rightPart, out long rightBit))
-                    {
-                        implications.Add(new Implication(leftMask, rightBit));
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"右辺に未定義の規則 '{rightPart}'");
-                    }
+                    implications.Add(new Implication(leftMask, nameToBit[rightPart]));
                 }
 
                 var solver = new HornImplicationSolver(ruleNames, implications);
                 var reports = solver.GenerateReportsByRightHandSide();
 
                 Console.WriteLine($"(ファイル: {fileName})");
-                Console.WriteLine($"規則の数: {expectedCount}件 (右辺 {expectedCount} 通り)");
+                Console.WriteLine($"規則の数: {expectedCount} (Z3ソルバー最適化版)");
 
                 foreach (var rep in reports)
                 {
@@ -271,16 +428,6 @@ namespace ImplicationSolver
                     {
                         Console.WriteLine("  証明するべき反例なし");
                     }
-
-                    if (rep.OmittedLeftPremises.Any())
-                    {
-                        Console.WriteLine("  省略された含意:");
-                        foreach (var left in rep.OmittedLeftPremises)
-                        {
-                            Console.WriteLine($"    ・ {left} -> {rep.RightName}");
-                        }
-                    }
-                    Console.WriteLine();
                 }
             }
             catch (Exception ex)
