@@ -410,7 +410,7 @@ namespace ImplicationSolver
                 var reports = solver.GenerateReportsByRightHandSide();
 
                 Console.WriteLine($"(ファイル: {fileName})");
-                Console.WriteLine($"規則の数: {expectedCount} (Z3ソルバー最適化版)");
+                Console.WriteLine($"規則の数: {expectedCount}");
 
                 foreach (var rep in reports)
                 {
