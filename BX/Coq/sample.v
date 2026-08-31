@@ -9,6 +9,8 @@ Export ListNotations.
 
 Require Export PeanoNat.
 
+Require Import Lia.
+
 Record Lens (S V : Type):= mkLens{
   p_get : S -> option V;
   p_put : S * V -> option S;

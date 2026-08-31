@@ -109,6 +109,82 @@ partial class Program
         }
         return t;
     }
+    static void notexists(Domain S,Domain V,VarPool vars,Dictionary<int,bool> model,string[] name)
+    {
+         String SType = "Dom4";
+    String VType = "Dom4"; 
+    var t = new String[S.Size];
+    var w = new String[V.Size];
+    if(S.Size == 2)
+    {
+        SType = "bool";
+        t[0] = "false";
+        t[1] = "true";
+    }
+    if(S.Size == 3)
+    {
+        SType = "Dom3";
+        t[0] = "aa";
+        t[1] = "bb";
+        t[2] = "cc";
+    }
+    if(S.Size == 4)
+    {
+        t[0] = "AA";
+        t[1] = "BB";
+        t[2] = "CC";
+        t[3] = "DD";
+    }
+
+    if(V.Size == 2)
+    {
+        VType = "bool";
+        w[0] = "true";
+        w[1] = "false";
+    }
+
+    if(V.Size == 3)
+    {
+        VType = "Dom3";
+        w[0] = "aa";
+        w[1] = "bb";
+        w[2] = "cc";
+    }
+    
+    if(V.Size == 4)
+    {
+        w[0] = "AA";
+        w[1] = "BB";
+        w[2] = "CC";
+        w[3] = "DD";
+    }
+
+foreach (var key in vars.Keys)
+{
+    if (key is XKey || key is XXKey || key is XXXKey ||
+        key is SKey || key is VKey || key is SEqKey)
+    {
+        int varId = vars.Get(key);
+
+        if (model.TryGetValue(varId, out bool val) && val)
+        {
+           
+            string formatted = key switch
+            {
+                XKey x => $"XKey {{ S = {t[x.S]}, Sp = {t[x.Sp]}, V = {w[x.V]} }}",
+                XXKey xx => $"XXKey {{ S = {t[xx.S]}, Sp = {t[xx.Sp]}, V = {w[xx.V]}, Vp = {w[xx.Vp]} }}",
+                XXXKey xxx => $"XXXKey {{ S = {t[xxx.S]}, Sp = {t[xxx.Sp]}, Spp = {t[xxx.Spp]}, V = {w[xxx.V]}, Vp = {w[xxx.Vp]} }}",
+                SKey sk => $"SKey {{ S = {t[sk.S]} }}",
+                VKey vk => $"VKey {{ V = {w[vk.V]} }}",
+                SEqKey seq => $"SEqKey {{ S = {t[seq.S]}, Sp = {t[seq.Sp]} }}",
+                _ => key.ToString()
+            };
+
+            Console.WriteLine(formatted);
+        }
+    }
+}
+    }
 
     static void srint(Domain S, Domain V, VarPool vars, Dictionary<int, bool> model,string[] name)
     {
@@ -239,8 +315,9 @@ partial class Program
                 else
                 {
                    var model = ParseModel(z3out);
-                   srint(S, V, vars, model,input);
-                   return;
+                   notexists(S,V,vars,model,input);
+                    srint(S, V, vars, model,input);
+                    return;
                 }
             }
         }
